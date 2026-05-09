@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import type { AuthResponse } from "../types/auth";
@@ -88,8 +88,7 @@ function Field({
         placeholder={placeholder}
         className={[
           "w-full rounded-lg border px-3 py-2 text-sm outline-none transition",
-          "focus:ring-2 focus:ring-teal-500 focus:border-teal-500",
-          error
+          "focus:ring-2 focus:ring-sky-400 focus:border-sky-500",          error
             ? "border-red-400 bg-red-50"
             : "border-gray-300 bg-white",
         ].join(" ")}
@@ -107,9 +106,11 @@ export default function LoginPage() {
   const navigate = useNavigate();
 
   // If already logged in, send them straight to their home
+  useEffect(() => {
   if (isAuthenticated && user) {
     navigate(HOME_FOR_ROLE[user.role], { replace: true });
   }
+}, [isAuthenticated, user, navigate]);
 
   const [tab, setTab]           = useState<Tab>("signin");
   const [loading, setLoading]   = useState(false);
@@ -166,32 +167,46 @@ export default function LoginPage() {
 
   // ── Render ───────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-      <div className="w-full max-w-sm">
+    <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-br from-white via-sky-50 to-blue-100 relative overflow-hidden">
+    <div className="absolute right-[-120px] top-[-80px] w-[520px] h-[520px] rounded-full bg-sky-200/40 blur-3xl" />
+     <div className="absolute right-[80px] bottom-[-160px] w-[420px] h-[420px] rounded-full bg-blue-300/20 blur-3xl" />
+
+    <div className="w-full max-w-md relative z-10">
 
         {/* Logo */}
-        <div className="flex items-center gap-2 justify-center mb-8">
+        {/* <div className="flex items-center gap-2 justify-center mb-8">
           <div className="w-8 h-8 rounded-lg bg-teal-600 flex items-center justify-center">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
               <path d="M8 2v12M2 8h12" stroke="white" strokeWidth="2" strokeLinecap="round"/>
             </svg>
           </div>
           <span className="text-xl font-bold tracking-tight text-gray-900">MedBook</span>
+        </div> */}
+
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <h1 className="text-5xl font-light tracking-tight text-sky-600">
+            MediBook
+          </h1>
+          <p className="mt-2 text-sm text-gray-500">
+            Simple appointment booking for patients and physicians
+          </p>
         </div>
 
         {/* Card */}
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="bg-white/95 rounded-2xl border border-gray-100 shadow-xl shadow-gray-200/50 overflow-hidden">
 
           {/* Tabs */}
           <div className="flex border-b border-gray-200">
             {(["signin", "signup"] as Tab[]).map((t) => (
               <button
                 key={t}
+                type="button"
                 onClick={() => switchTab(t)}
                 className={[
                   "flex-1 py-3 text-sm font-medium transition-colors",
                   tab === t
-                    ? "text-teal-700 border-b-2 border-teal-600 bg-white"
+                    ? "text-sky-700 border-b-2 border-sky-500 bg-white"
                     : "text-gray-500 hover:text-gray-700 bg-gray-50",
                 ].join(" ")}
               >
@@ -250,8 +265,8 @@ export default function LoginPage() {
               className={[
                 "w-full rounded-lg py-2.5 text-sm font-semibold text-white transition",
                 loading
-                  ? "bg-teal-400 cursor-not-allowed"
-                  : "bg-teal-600 hover:bg-teal-700 active:bg-teal-800",
+                  ? "bg-sky-300 cursor-not-allowed"
+                  : "bg-sky-600 hover:bg-sky-700 active:bg-sky-800",
               ].join(" ")}
             >
               {loading
