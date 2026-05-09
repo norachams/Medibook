@@ -51,7 +51,7 @@ async function apiRegister(
 // Where to send each role after a successful login
 // ---------------------------------------------------------------------------
 const HOME_FOR_ROLE = {
-  patient:   "/patient/book",
+  patient: "/patient/dashboard",
   physician: "/physician/dashboard",
 } as const;
 
