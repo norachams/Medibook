@@ -20,12 +20,49 @@ PHYSICIANS = [
         "password": "123123",
         "full_name": "Dr. Sarah Chen",
         "role": "physician",
+        "specialty": "Family Medicine",
+        "description": "General checkups, common concerns, preventive care, and ongoing health management.",
+        "location": "MediBook Clinic · Room 204",
+        "rating": 4.9,
+        "slots": [
+            ("2026-05-14", "May 14, 2026", "9:00 AM"),
+            ("2026-05-14", "May 14, 2026", "10:30 AM"),
+            ("2026-05-14", "May 14, 2026", "1:00 PM"),
+            ("2026-05-14", "May 14, 2026", "3:30 PM"),
+        ],
     },
     {
         "email": "james.okafor@medbook.dev",
         "password": "123123",
         "full_name": "Dr. James Okafor",
         "role": "physician",
+        "specialty": "Internal Medicine",
+        "description": "Adult primary care, chronic condition management, and follow-up visits.",
+        "location": "MediBook Clinic · Room 118",
+        "rating": 4.8,
+        "slots": [
+            ("2026-05-15", "May 15, 2026", "10:00 AM"),
+            ("2026-05-15", "May 15, 2026", "11:30 AM"),
+            ("2026-05-15", "May 15, 2026", "2:00 PM"),
+            ("2026-05-15", "May 15, 2026", "4:00 PM"),
+        ],
+
+     },
+    {
+        "email": "emily.wilson@medbook.dev",
+        "password": "123123",
+        "full_name": "Dr. Emily Wilson",
+        "role": "physician",
+        "specialty": "Pediatrics",
+        "description": "Care for children, routine visits, minor illnesses, and parent consultations.",
+        "location": "MediBook Clinic · Room 310",
+        "rating": 4.9,
+        "slots": [
+            ("2026-05-16", "May 16, 2026", "8:30 AM"),
+            ("2026-05-16", "May 16, 2026", "10:00 AM"),
+            ("2026-05-16", "May 16, 2026", "2:30 PM"),
+            ("2026-05-16", "May 16, 2026", "5:00 PM"),
+        ],
     },
 ]
 
@@ -71,6 +108,71 @@ def seed():
         )
         print(f"  create [{user['role']:>9}]  {user['email']}")
         created += 1
+
+    # Create physician profiles and appointment slots
+    for physician in PHYSICIANS:
+        user_row = cursor.execute(
+            "SELECT id FROM users WHERE email = ?",
+            (physician["email"],),
+        ).fetchone()
+
+        if not user_row:
+            continue
+
+        user_id = user_row["id"]
+
+        existing_profile = cursor.execute(
+            "SELECT id FROM physician_profiles WHERE user_id = ?",
+            (user_id,),
+        ).fetchone()
+
+        if existing_profile:
+            physician_profile_id = existing_profile["id"]
+            print(f"  skip   profile for {physician['email']}  (already exists)")
+        else:
+            cursor.execute(
+                """
+                INSERT INTO physician_profiles
+                    (user_id, specialty, description, location, rating)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (
+                    user_id,
+                    physician["specialty"],
+                    physician["description"],
+                    physician["location"],
+                    physician["rating"],
+                ),
+            )
+
+            physician_profile_id = cursor.lastrowid
+            print(f"  create profile for {physician['email']}")
+
+        # Create appointment slots for this physician
+        for date, display_date, time in physician["slots"]:
+            existing_slot = cursor.execute(
+                """
+                SELECT id FROM appointment_slots
+                WHERE physician_id = ? AND date = ? AND time = ?
+                """,
+                (physician_profile_id, date, time),
+            ).fetchone()
+
+            if existing_slot:
+                print(f"  skip   slot {display_date} {time}")
+                continue
+
+            cursor.execute(
+                """
+                INSERT INTO appointment_slots
+                    (physician_id, date, display_date, time, is_available)
+                VALUES (?, ?, ?, ?, 1)
+                """,
+                (physician_profile_id, date, display_date, time),
+            )
+
+            print(f"  create slot {display_date} {time}")
+
 
     conn.commit()
     conn.close()

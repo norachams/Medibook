@@ -25,10 +25,50 @@ def init_db():
             full_name     TEXT    NOT NULL,
             created_at    DATETIME DEFAULT CURRENT_TIMESTAMP
         );
+ 
+        CREATE TABLE IF NOT EXISTS physician_profiles (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id     INTEGER NOT NULL UNIQUE,
+            specialty   TEXT    NOT NULL,
+            description TEXT,
+            location    TEXT,
+            rating      REAL    DEFAULT 4.8,
+            FOREIGN KEY (user_id) REFERENCES users (id)
+        );
+ 
+        CREATE TABLE IF NOT EXISTS appointment_slots (
+            id           INTEGER PRIMARY KEY AUTOINCREMENT,
+            physician_id INTEGER NOT NULL,
+            date         TEXT    NOT NULL,
+            display_date TEXT    NOT NULL,
+            time         TEXT    NOT NULL,
+            is_available INTEGER DEFAULT 1,
+            FOREIGN KEY (physician_id) REFERENCES physician_profiles (id)
+        );
+ 
+        CREATE TABLE IF NOT EXISTS bookings (
+            id             INTEGER PRIMARY KEY AUTOINCREMENT,
+            patient_id     INTEGER NOT NULL,
+            physician_id   INTEGER NOT NULL,
+            slot_id        INTEGER NOT NULL,
+            patient_name   TEXT    NOT NULL,
+            patient_email  TEXT    NOT NULL,
+            patient_phone  TEXT,
+            reason         TEXT    NOT NULL,
+            status         TEXT    DEFAULT 'pending'
+                                   CHECK(status IN ('pending', 'confirmed', 'cancelled')),
+            created_at     DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (patient_id)   REFERENCES users (id),
+            FOREIGN KEY (physician_id) REFERENCES physician_profiles (id),
+            FOREIGN KEY (slot_id)      REFERENCES appointment_slots (id)
+        );
     """)
+ 
 
     conn.commit()
     conn.close()
+
+
 
 
 if __name__ == "__main__":

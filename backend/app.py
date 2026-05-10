@@ -3,6 +3,8 @@ from flask_jwt_extended import JWTManager
 from flask_cors import CORS
 
 from routes.auth import auth_bp
+from routes.physicians import physicians_bp
+
 
 
 def create_app():
@@ -22,6 +24,8 @@ def create_app():
 
     # --- blueprints -------------------------------------------------------
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
+    app.register_blueprint(physicians_bp,  url_prefix="/api/physicians")  # new
+
 
     return app
 
