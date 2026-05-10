@@ -14,6 +14,7 @@ export default function PhysicianPage() {
   const [error, setError]           = useState<string | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [selectedSlotId, setSelectedSlotId] = useState<number | null>(null);
+  const [hasActiveBooking, setHasActiveBooking] = useState(false);
   const [fullName, setFullName]   = useState("");
   const [email, setEmail]         = useState("");
   const [phone, setPhone]         = useState("");
@@ -21,6 +22,7 @@ export default function PhysicianPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  
 
    // Single fetch — sets physician AND pre-selects first slot in one .then()
   useEffect(() => {
@@ -37,6 +39,14 @@ export default function PhysicianPage() {
           setSelectedSlot(data.slots[0].time);
           setSelectedSlotId(data.slots[0].id);
         }
+        // Chain a second fetch to check for an existing active booking
+        return fetch(`http://localhost:8000/api/bookings/check/${data.id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      })
+      .then((res) => res.json())
+      .then((data: { has_active_booking: boolean }) => {
+        setHasActiveBooking(data.has_active_booking);
       })
       .catch((err: Error) => setError(err.message))
       .finally(() => setLoading(false));
@@ -81,7 +91,7 @@ export default function PhysicianPage() {
   // ── Loading / error states ───────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-white via-sky-50 to-blue-100">
+      <div className="flex min-h-screen items-center justify-center bg-linear-to-br from-white via-sky-50 to-blue-100">
         <p className="text-sm text-gray-400">Loading…</p>
       </div>
     );
@@ -89,7 +99,7 @@ export default function PhysicianPage() {
 
   if (error || !physician) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-white via-sky-50 to-blue-100">
+      <div className="flex min-h-screen items-center justify-center bg-linear-to-br from-white via-sky-50 to-blue-100">
         <div className="text-center">
           <p className="text-lg font-semibold text-gray-700">{error ?? "Physician not found."}</p>
           <button
@@ -130,6 +140,8 @@ export default function PhysicianPage() {
       </div>
     );
   }
+  const isBlocked = submitting || !selectedSlot || hasActiveBooking;
+
 
   // ── Main layout ──────────────────────────────────────────────────────────
   return (
@@ -183,12 +195,14 @@ export default function PhysicianPage() {
                   <button
                     key={slot.id}
                     type="button"
-                    onClick={() => setSelectedSlot(slot.time)}
+                    onClick={() => { if (!hasActiveBooking) { setSelectedSlot(slot.time); setSelectedSlotId(slot.id); } }}
                     className={[
-                      "rounded-xl px-5 py-2.5 text-sm font-semibold transition",
-                      selectedSlot === slot.time
-                        ? "bg-sky-500 text-white shadow-md shadow-sky-200"
-                        : "border border-gray-200 bg-white text-gray-700 hover:border-sky-300 hover:text-sky-600",
+                    "rounded-xl px-5 py-2.5 text-sm font-semibold transition",
+                    hasActiveBooking
+                        ? "cursor-not-allowed border border-gray-100 bg-gray-50 text-gray-300"  
+                        : selectedSlot === slot.time
+                        ? "bg-sky-500 text-white shadow-md shadow-sky-200"                    
+                        : "border border-gray-200 bg-white text-gray-700 hover:border-sky-300 hover:text-sky-600", 
                     ].join(" ")}
                   >
                     {slot.time}
@@ -207,9 +221,13 @@ export default function PhysicianPage() {
               </p>
 
               <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-                {submitError && (
+
+              {/* Warning banner — shows on load if already booked, or on submit error */}
+                {(hasActiveBooking || submitError) && (
                   <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-2 text-sm text-red-600">
-                    {submitError}
+                    {hasActiveBooking
+                      ? "You already have an active booking with this physician. Cancel it before booking again."
+                      : submitError}
                   </div>
                 )}
 
@@ -252,10 +270,10 @@ export default function PhysicianPage() {
 
                 <button
                   type="submit"
-                  disabled={submitting || !selectedSlot}
+                  disabled={isBlocked}
                   className={[
                     "w-full rounded-xl py-3 text-sm font-semibold text-white transition",
-                    submitting || !selectedSlot
+                    isBlocked
                       ? "cursor-not-allowed bg-sky-300"
                       : "bg-sky-500 shadow-md shadow-sky-200 hover:bg-sky-600",
                   ].join(" ")}

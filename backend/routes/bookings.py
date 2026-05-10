@@ -47,7 +47,24 @@ def create_booking():
     if not slot:
         conn.close()
         return jsonify({"error": "This slot is no longer available."}), 409
+    
+    existing = conn.execute(
+    """
+    SELECT id FROM bookings
+    WHERE patient_id = ?
+      AND physician_id = ?
+      AND status IN ('pending', 'confirmed')
+    """,
+    (patient_id, physician_id),
+    ).fetchone()
 
+    if existing:
+        conn.close()
+        return jsonify({
+            "error": "You already have an active booking with this physician. Cancel it before booking again."
+        }), 409
+    
+    
     # Insert the booking
     conn.execute(
         """
@@ -118,3 +135,23 @@ def get_my_bookings():
         }
         for r in rows
     ]), 200
+
+
+@bookings_bp.route("/check/<int:physician_id>", methods=["GET"])
+@jwt_required()
+def check_booking(physician_id):
+    patient_id = int(get_jwt_identity())
+    conn = get_db()
+
+    existing = conn.execute(
+        """
+        SELECT id FROM bookings
+        WHERE patient_id = ?
+          AND physician_id = ?
+          AND status IN ('pending', 'confirmed')
+        """,
+        (patient_id, physician_id),
+    ).fetchone()
+
+    conn.close()
+    return jsonify({"has_active_booking": existing is not None}), 200
