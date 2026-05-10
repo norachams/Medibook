@@ -65,7 +65,7 @@ export default function BookingPage() {
   }, []); // empty array = run once on mount
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-sky-50 to-blue-100 px-6 py-10">
+    <div className="min-h-screen bg-linear-to-br from-white via-sky-50 to-blue-100 px-6 py-10">
       <div className="mx-auto max-w-7xl">
         <button
             onClick={() => navigate("/patient/dashboard")}

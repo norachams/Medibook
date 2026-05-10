@@ -1,7 +1,27 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import type { Physician } from "../../types/physician";
+import type { Physician,Slot } from "../../types/physician";
 import { useAuth } from "../../context/AuthContext";
+
+
+// ---------------------------------------------------------------------------
+// Helper — build a 7-day strip starting from today
+// Returns array of { date: "2026-05-14", label: "Wed", day: "14" }
+// ---------------------------------------------------------------------------
+function buildDateStrip() {
+  const days = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date();
+    d.setDate(d.getDate() + i);
+    days.push({
+      date:  d.toISOString().split("T")[0],                          // "2026-05-14"
+      label: d.toLocaleDateString("en-US", { weekday: "short" }),    // "Wed"
+      day:   d.toLocaleDateString("en-US", { day: "numeric" }),      // "14"
+      month: d.toLocaleDateString("en-US", { month: "short" }),      // "May"
+    });
+  }
+  return days;
+}
 
 
 export default function PhysicianPage() {
@@ -14,6 +34,7 @@ export default function PhysicianPage() {
   const [error, setError]           = useState<string | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [selectedSlotId, setSelectedSlotId] = useState<number | null>(null);
+  const [selectedDate, setSelectedDate]         = useState<string | null>(null); // NEW: selected day in strip
   const [hasActiveBooking, setHasActiveBooking] = useState(false);
   const [fullName, setFullName]   = useState("");
   const [email, setEmail]         = useState("");
@@ -22,6 +43,9 @@ export default function PhysicianPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
+
+    const dateStrip = buildDateStrip();
+
   
 
    // Single fetch — sets physician AND pre-selects first slot in one .then()
@@ -34,11 +58,17 @@ export default function PhysicianPage() {
       })
       .then((data: Physician) => {
         setPhysician(data);
+
+
         // Pre-select first available slot (both display time and id)
         if (data.slots.length > 0) {
+          const firstSlotDate = data.slots[0].date;
+          setSelectedDate(firstSlotDate);
+          // Pre-select the first slot on that date
           setSelectedSlot(data.slots[0].time);
           setSelectedSlotId(data.slots[0].id);
         }
+
         // Chain a second fetch to check for an existing active booking
         return fetch(`http://localhost:8000/api/bookings/check/${data.id}`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -50,7 +80,29 @@ export default function PhysicianPage() {
       })
       .catch((err: Error) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [physicianId]);
+  }, [physicianId, token]);
+
+   const slotsForSelectedDate: Slot[] = physician?.slots.filter(
+    (s) => s.date === selectedDate
+  ) ?? [];
+
+  const datesWithSlots = new Set(physician?.slots.map((s) => s.date) ?? []);
+ 
+  const handleDateSelect = (date: string) => {
+    if (!datesWithSlots.has(date)) return;
+    setSelectedDate(date);
+    // Auto-select first slot of newly selected date
+    const firstSlot = physician?.slots.find((s) => s.date === date);
+    if (firstSlot) {
+      setSelectedSlot(firstSlot.time);
+      setSelectedSlotId(firstSlot.id);
+    } else {
+      setSelectedSlot(null);
+      setSelectedSlotId(null);
+    }
+  };
+ 
+  const isBlocked = submitting || !selectedSlot || hasActiveBooking;
 
   // ── Submit — real POST to /api/bookings ──────────────────────────────────
   const handleSubmit = async (e: React.FormEvent) => {
@@ -140,7 +192,6 @@ export default function PhysicianPage() {
       </div>
     );
   }
-  const isBlocked = submitting || !selectedSlot || hasActiveBooking;
 
 
   // ── Main layout ──────────────────────────────────────────────────────────
@@ -186,29 +237,72 @@ export default function PhysicianPage() {
               </div>
             </div>
 
-            {/* Slot picker */}
+
+
+            {/* NEW: date strip + slot picker in one card */}
             <div className="rounded-3xl border border-gray-100 bg-white p-8 shadow-lg shadow-gray-100/60">
               <h2 className="mb-1 text-xl font-bold text-gray-900">Available appointment times</h2>
-              <p className="mb-5 text-sm text-gray-400">Choose one of the open times below.</p>
-              <div className="flex flex-wrap gap-3">
-                {physician.slots.map((slot) => (
-                  <button
-                    key={slot.id}
-                    type="button"
-                    onClick={() => { if (!hasActiveBooking) { setSelectedSlot(slot.time); setSelectedSlotId(slot.id); } }}
-                    className={[
-                    "rounded-xl px-5 py-2.5 text-sm font-semibold transition",
-                    hasActiveBooking
-                        ? "cursor-not-allowed border border-gray-100 bg-gray-50 text-gray-300"  
-                        : selectedSlot === slot.time
-                        ? "bg-sky-500 text-white shadow-md shadow-sky-200"                    
-                        : "border border-gray-200 bg-white text-gray-700 hover:border-sky-300 hover:text-sky-600", 
-                    ].join(" ")}
-                  >
-                    {slot.time}
-                  </button>
-                ))}
+              <p className="mb-5 text-sm text-gray-400">Select a day, then choose a time.</p>
+ 
+              {/* NEW: 7-day date strip */}
+              <div className="mb-6 grid grid-cols-7 gap-2">
+                {dateStrip.map(({ date, label, day, month }) => {
+                  const hasSlots   = datesWithSlots.has(date);               
+                  const isSelected = selectedDate === date;                   
+                  const isDisabled = !hasSlots ;        
+ 
+                  return (
+                    <button
+                      key={date}
+                      type="button"
+                      onClick={() => handleDateSelect(date)}
+                    //   disabled={isDisabled}
+                      className={[
+                        "flex flex-col items-center rounded-2xl py-3 text-center transition",
+                        isSelected && !isDisabled
+                          ? "bg-sky-500 text-white shadow-md shadow-sky-200"           // selected day
+                          : isDisabled
+                          ? "cursor-not-allowed bg-gray-50 text-gray-300"              // no slots / blocked
+                          : "border border-gray-200 bg-white text-gray-700 hover:border-sky-300 hover:text-sky-600", // available
+                      ].join(" ")}
+                    >
+                      <span className="text-xs font-medium">{label}</span>   {/* Mon, Tue… */}
+                      <span className="text-base font-bold">{day}</span>      {/* 14, 15… */}
+                      <span className="text-xs opacity-70">{month}</span>     {/* May */}
+                    </button>
+                  );
+                })}
               </div>
+ 
+              {/* NEW: time slots filtered to selected date */}
+              {slotsForSelectedDate.length === 0 ? (
+                <p className="text-sm text-gray-400">No available slots for this day.</p>
+              ) : (
+                <div className="flex flex-wrap gap-3">
+                  {slotsForSelectedDate.map((slot) => (
+                    <button
+                      key={slot.id}
+                      type="button"
+                      onClick={() => {
+                        if (!hasActiveBooking) {
+                          setSelectedSlot(slot.time);
+                          setSelectedSlotId(slot.id);
+                        }
+                      }}
+                      className={[
+                        "rounded-xl px-5 py-2.5 text-sm font-semibold transition",
+                        hasActiveBooking
+                          ? "cursor-not-allowed border border-gray-100 bg-gray-50 text-gray-300"  // blocked
+                          : selectedSlot === slot.time
+                          ? "bg-sky-500 text-white shadow-md shadow-sky-200"                      // selected
+                          : "border border-gray-200 bg-white text-gray-700 hover:border-sky-300 hover:text-sky-600", // default
+                      ].join(" ")}
+                    >
+                      {slot.time}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
@@ -260,26 +354,36 @@ export default function PhysicianPage() {
                     className="w-full resize-none rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-100" />
                 </div>
 
-                {selectedSlot && (
+                {/* {selectedSlot && (
                   <div className="rounded-2xl bg-sky-50 px-4 py-3 text-sm">
                     <p className="mb-1 font-semibold text-gray-800">Summary</p>
                     <p className="text-gray-600">{physician.name}</p>
                     <p className="text-gray-600">{selectedSlot}</p>
                   </div>
+                )} */}
+
+                {/* NEW: summary now shows date + time so the patient sees the full picture */}
+                {selectedSlot && selectedDate && (
+                  <div className="rounded-2xl bg-sky-50 px-4 py-3 text-sm">
+                    <p className="mb-1 font-semibold text-gray-800">Summary</p>
+                    <p className="text-gray-600">{physician.name}</p>
+                    <p className="text-gray-600">
+                      {/* Find the display_date for the selected date */}
+                      {physician.slots.find((s) => s.date === selectedDate)?.display_date} at {selectedSlot}
+                    </p>
+                  </div>
                 )}
 
-                <button
-                  type="submit"
-                  disabled={isBlocked}
+                <button type="submit" disabled={isBlocked}
                   className={[
                     "w-full rounded-xl py-3 text-sm font-semibold text-white transition",
                     isBlocked
                       ? "cursor-not-allowed bg-sky-300"
                       : "bg-sky-500 shadow-md shadow-sky-200 hover:bg-sky-600",
-                  ].join(" ")}
-                >
+                  ].join(" ")}>
                   {submitting ? "Submitting…" : "Request appointment"}
                 </button>
+
               </form>
             </div>
           </div>

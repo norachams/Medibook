@@ -1,15 +1,15 @@
 export interface Slot {
-  id: number;
-  date: string;
-  display_date: string;
-  time: string;
+  id:           number;
+  date:         string;        
+  display_date: string;        
+  time:         string;       
 }
 
 export interface Physician {
   id: number;
   name: string;
   specialty: string;
-  description: string;   // matches seed.py and DB column name
+  description: string;   
   rating: number;
   location: string;
   availabilityLabel: string;

@@ -20,3 +20,4 @@ From the dashboard, patients can click “Book appointment” to enter a physici
 
 
   # Future Enhancements 
+- Right now, the patient can only book from the available appointment slots shown for the upcoming week. With more time, I would make the booking flow more flexible by adding a fuller calendar view where patients can browse future dates.
