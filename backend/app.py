@@ -4,6 +4,8 @@ from flask_cors import CORS
 
 from routes.auth import auth_bp
 from routes.physicians import physicians_bp
+from routes.bookings import bookings_bp
+
 
 
 
@@ -24,7 +26,9 @@ def create_app():
 
     # --- blueprints -------------------------------------------------------
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
-    app.register_blueprint(physicians_bp,  url_prefix="/api/physicians")  # new
+    app.register_blueprint(physicians_bp,  url_prefix="/api/physicians")  
+    app.register_blueprint(bookings_bp, url_prefix="/api/bookings")
+
 
 
     return app

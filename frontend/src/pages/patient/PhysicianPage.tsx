@@ -1,29 +1,33 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import type { Physician } from "../../types/physician";
+import { useAuth } from "../../context/AuthContext";
+
 
 export default function PhysicianPage() {
   const { physicianId } = useParams();
   const navigate = useNavigate();
+  const { token }       = useAuth();
 
   const [physician, setPhysician]   = useState<Physician | null>(null);
   const [loading, setLoading]       = useState(true);
   const [error, setError]           = useState<string | null>(null);
-
-  // Fetch this specific physician from GET /api/physicians/:id
-  useEffect(() => {
-    fetch(`http://localhost:8000/api/physicians/${physicianId}`)
-      .then((res) => {
-        if (res.status === 404) throw new Error("Physician not found.");
-        if (!res.ok) throw new Error("Failed to load physician.");
-        return res.json();
-      })
-      .then((data: Physician) => setPhysician(data))
-      .catch((err: Error) => setError(err.message))
-      .finally(() => setLoading(false));
-  }, [physicianId]); // re-fetch if the ID in the URL changes
-
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
+  const [selectedSlotId, setSelectedSlotId] = useState<number | null>(null);
+
+//   // Fetch this specific physician from GET /api/physicians/:id
+//   useEffect(() => {
+//     fetch(`http://localhost:8000/api/physicians/${physicianId}`)
+//       .then((res) => {
+//         if (res.status === 404) throw new Error("Physician not found.");
+//         if (!res.ok) throw new Error("Failed to load physician.");
+//         return res.json();
+//       })
+//       .then((data: Physician) => setPhysician(data))
+//       .catch((err: Error) => setError(err.message))
+//       .finally(() => setLoading(false));
+//   }, [physicianId]); // re-fetch if the ID in the URL changes
+
   const [fullName, setFullName]   = useState("");
   const [email, setEmail]         = useState("");
   const [phone, setPhone]         = useState("");
@@ -32,21 +36,61 @@ export default function PhysicianPage() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
 
-  // Pre-select first slot once physician data arrives
+   // Single fetch — sets physician AND pre-selects first slot in one .then()
   useEffect(() => {
-  fetch(`http://localhost:8000/api/physicians/${physicianId}`)
-    .then((res) => {
-      if (res.status === 404) throw new Error("Physician not found.");
-      if (!res.ok) throw new Error("Failed to load physician.");
-      return res.json();
-    })
-    .then((data: Physician) => {
-      setPhysician(data);
-      setSelectedSlot(data.slots[0]?.time ?? null); // ← set here, same callback
-    })
-    .catch((err: Error) => setError(err.message))
-    .finally(() => setLoading(false));
-}, [physicianId]);
+    fetch(`http://localhost:8000/api/physicians/${physicianId}`)
+      .then((res) => {
+        if (res.status === 404) throw new Error("Physician not found.");
+        if (!res.ok) throw new Error("Failed to load physician.");
+        return res.json();
+      })
+      .then((data: Physician) => {
+        setPhysician(data);
+        // Pre-select first available slot (both display time and id)
+        if (data.slots.length > 0) {
+          setSelectedSlot(data.slots[0].time);
+          setSelectedSlotId(data.slots[0].id);
+        }
+      })
+      .catch((err: Error) => setError(err.message))
+      .finally(() => setLoading(false));
+  }, [physicianId]);
+
+  // ── Submit — real POST to /api/bookings ──────────────────────────────────
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedSlotId || !physician) return;
+    setSubmitError(null);
+    setSubmitting(true);
+ 
+    try {
+      const res = await fetch("http://localhost:8000/api/bookings/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`, // send JWT so Flask knows who's booking
+        },
+        body: JSON.stringify({
+          physician_id:  physician.id,
+          slot_id:       selectedSlotId,   // ID of the slot, not just the time string
+          patient_name:  fullName,
+          patient_email: email,
+          patient_phone: phone,
+          reason,
+        }),
+      });
+ 
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Something went wrong.");
+      setSubmitted(true);
+    } catch (err: unknown) {
+      const e = err as Error;
+      setSubmitError(e.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+ 
 
   // ── Loading / error states ───────────────────────────────────────────────
   if (loading) {
@@ -74,22 +118,22 @@ export default function PhysicianPage() {
   }
 
   // ── Submit ───────────────────────────────────────────────────────────────
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedSlot) return;
-    setSubmitError(null);
-    setSubmitting(true);
+//   const handleSubmit = async (e: React.FormEvent) => {
+//     e.preventDefault();
+//     if (!selectedSlot) return;
+//     setSubmitError(null);
+//     setSubmitting(true);
 
-    try {
-      // TODO: replace with real POST /api/bookings once backend route exists
-      await new Promise((r) => setTimeout(r, 800)); // simulated delay
-      setSubmitted(true);
-    } catch {
-      setSubmitError("Something went wrong. Please try again.");
-    } finally {
-      setSubmitting(false);
-    }
-  };
+//     try {
+//       // TODO: replace with real POST /api/bookings once backend route exists
+//       await new Promise((r) => setTimeout(r, 800)); // simulated delay
+//       setSubmitted(true);
+//     } catch {
+//       setSubmitError("Something went wrong. Please try again.");
+//     } finally {
+//       setSubmitting(false);
+//     }
+//   };
 
   // ── Success screen ───────────────────────────────────────────────────────
   if (submitted) {
