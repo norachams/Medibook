@@ -14,20 +14,6 @@ export default function PhysicianPage() {
   const [error, setError]           = useState<string | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [selectedSlotId, setSelectedSlotId] = useState<number | null>(null);
-
-//   // Fetch this specific physician from GET /api/physicians/:id
-//   useEffect(() => {
-//     fetch(`http://localhost:8000/api/physicians/${physicianId}`)
-//       .then((res) => {
-//         if (res.status === 404) throw new Error("Physician not found.");
-//         if (!res.ok) throw new Error("Failed to load physician.");
-//         return res.json();
-//       })
-//       .then((data: Physician) => setPhysician(data))
-//       .catch((err: Error) => setError(err.message))
-//       .finally(() => setLoading(false));
-//   }, [physicianId]); // re-fetch if the ID in the URL changes
-
   const [fullName, setFullName]   = useState("");
   const [email, setEmail]         = useState("");
   const [phone, setPhone]         = useState("");
@@ -116,24 +102,6 @@ export default function PhysicianPage() {
       </div>
     );
   }
-
-  // ── Submit ───────────────────────────────────────────────────────────────
-//   const handleSubmit = async (e: React.FormEvent) => {
-//     e.preventDefault();
-//     if (!selectedSlot) return;
-//     setSubmitError(null);
-//     setSubmitting(true);
-
-//     try {
-//       // TODO: replace with real POST /api/bookings once backend route exists
-//       await new Promise((r) => setTimeout(r, 800)); // simulated delay
-//       setSubmitted(true);
-//     } catch {
-//       setSubmitError("Something went wrong. Please try again.");
-//     } finally {
-//       setSubmitting(false);
-//     }
-//   };
 
   // ── Success screen ───────────────────────────────────────────────────────
   if (submitted) {

@@ -48,6 +48,7 @@ function PhysicianCard({ physician }: { physician: Physician }) {
 // BookingPage — fetches physicians from GET /api/physicians
 // ---------------------------------------------------------------------------
 export default function BookingPage() {
+  const navigate = useNavigate();
   const [physicians, setPhysicians] = useState<Physician[]>([]);
   const [loading, setLoading]       = useState(true);
   const [error, setError]           = useState<string | null>(null);
@@ -66,8 +67,15 @@ export default function BookingPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-sky-50 to-blue-100 px-6 py-10">
       <div className="mx-auto max-w-7xl">
+        <button
+            onClick={() => navigate("/patient/dashboard")}
+            className="mb-6 flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 shadow-sm transition hover:bg-gray-50"
+            >
+            ← Back to dashboard
+            </button>
 
         <div className="mb-10 flex items-start justify-between">
+            
           <div>
             <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-sky-500">
               Patient flow
