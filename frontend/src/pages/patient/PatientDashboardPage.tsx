@@ -22,8 +22,8 @@ const STATUS_STYLES: Record<Booking["status"], string> = {
 
 export default function PatientDashboardPage() {
   const navigate        = useNavigate();
-  const { token, user } = useAuth();
- 
+  const { token, user, logout} = useAuth();
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState<string | null>(null);
@@ -48,6 +48,11 @@ export default function PatientDashboardPage() {
     pending:   bookings.filter((b) => b.status === "pending").length,
     confirmed: bookings.filter((b) => b.status === "confirmed").length,
   };
+
+  const handleSignOut = () => {
+  logout();
+  navigate("/login");
+};
 
   const handleCancelBooking = async (bookingId: number) => {
   try {
@@ -89,15 +94,61 @@ const handleRescheduleBooking = (bookingId: number) => {
             <h1 className="text-4xl font-light tracking-tight text-sky-600">MediBook</h1>
             <p className="mt-1 text-sm text-gray-500">Patient dashboard</p>
           </div>
-          <div className="flex items-center gap-3 rounded-2xl border border-sky-100 bg-white/85 px-4 py-3 shadow-sm">
-            <div className="text-right">
-              <p className="text-sm font-semibold text-gray-900">{user?.name ?? "Patient"}</p>
-              <p className="text-xs font-medium text-gray-400">Patient account</p>
-            </div>
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-sky-100 text-sm font-semibold text-sky-700">
-              {user?.name?.[0] ?? "P"}
-            </div>
-          </div>
+
+
+          <div className="relative">
+  <button
+    onClick={() => setProfileMenuOpen(!profileMenuOpen)}
+    className="flex items-center gap-3 rounded-2xl border border-sky-100 bg-white/85 px-4 py-3 shadow-sm transition hover:bg-white"
+  >
+    <div className="text-right">
+      <p className="text-sm font-semibold text-gray-900">
+        {user?.name ?? "Patient"}
+      </p>
+      <p className="text-xs font-medium text-gray-400">Patient account</p>
+    </div>
+
+    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-sky-100 text-sm font-semibold text-sky-700">
+      {user?.name?.[0] ?? "P"}
+    </div>
+
+    <span className="text-xs text-gray-400">⌄</span>
+  </button>
+
+  {profileMenuOpen && (
+    <div className="absolute right-0 top-16 z-30 w-52 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-xl shadow-gray-200/60">
+      <button
+        onClick={() => {
+          setProfileMenuOpen(false);
+          navigate("/patient/past-appointments");
+        }}
+        className="block w-full px-4 py-3 text-left text-sm text-gray-600 transition hover:bg-sky-50 hover:text-sky-700"
+      >
+        Past appointments
+      </button>
+
+      <button
+        onClick={() => {
+          setProfileMenuOpen(false);
+          navigate("/patient/profile");
+        }}
+        className="block w-full px-4 py-3 text-left text-sm text-gray-600 transition hover:bg-sky-50 hover:text-sky-700"
+      >
+        Edit profile
+      </button>
+
+      <div className="border-t border-gray-100" />
+
+      <button
+        onClick={handleSignOut}
+        className="block w-full px-4 py-3 text-left text-sm text-red-500 transition hover:bg-red-50"
+      >
+        Sign out
+      </button>
+    </div>
+  )}
+</div>
+
         </header>
  
         <main className="space-y-6">
