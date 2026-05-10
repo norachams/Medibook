@@ -27,6 +27,7 @@ export default function PatientDashboardPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState<string | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
 
   useEffect(() => {
     fetch("http://localhost:8000/api/bookings/my", {
@@ -47,6 +48,36 @@ export default function PatientDashboardPage() {
     pending:   bookings.filter((b) => b.status === "pending").length,
     confirmed: bookings.filter((b) => b.status === "confirmed").length,
   };
+
+  const handleCancelBooking = async (bookingId: number) => {
+  try {
+    const res = await fetch(`http://localhost:8000/api/bookings/${bookingId}/cancel`, {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!res.ok) throw new Error("Failed to cancel booking.");
+
+    // Update the UI without needing to refresh the page
+    setBookings((currentBookings) =>
+      currentBookings.map((booking) =>
+        booking.id === bookingId
+          ? { ...booking, status: "cancelled" }
+          : booking
+      )
+    );
+
+    setOpenMenuId(null);
+  } catch {
+    setError("Could not cancel appointment.");
+  }
+};
+
+const handleRescheduleBooking = (bookingId: number) => {
+  navigate(`/patient/book?reschedule=${bookingId}`);
+};
  
 
   return (
@@ -127,19 +158,56 @@ export default function PatientDashboardPage() {
             {!loading && !error && bookings.length > 0 && (
               <div className="flex flex-col gap-4">
                 {bookings.map((b) => (
-                  <div key={b.id}
-                    className="flex items-center justify-between rounded-2xl border border-gray-100 bg-gray-50 px-6 py-4">
-                    <div>
-                      <p className="font-semibold text-gray-900">{b.physician_name}</p>
-                      <p className="text-sm text-sky-500">{b.specialty}</p>
-                      <p className="mt-1 text-sm text-gray-500">
-                        {b.display_date} at {b.time}
-                      </p>
-                      <p className="mt-1 text-xs text-gray-400 italic">"{b.reason}"</p>
+                  <div
+                    key={b.id}
+                    className="relative rounded-2xl border border-gray-100 bg-gray-50 px-6 py-5"
+                  >
+                    {b.status !== "cancelled" && (
+                      <div className="absolute right-4 top-4">
+                        <button
+                          onClick={() => setOpenMenuId(openMenuId === b.id ? null : b.id)}
+                          className="flex h-8 w-8 items-center justify-center rounded-full text-gray-400 transition hover:bg-white hover:text-gray-700"
+                          aria-label="Appointment options"
+                        >
+                          <span className="text-xl leading-none">⋯</span>
+                        </button>
+
+                        {openMenuId === b.id && (
+                          <div className="absolute right-0 top-9 z-20 w-44 overflow-hidden rounded-xl border border-gray-100 bg-white shadow-lg shadow-gray-200/60">
+                            <button
+                              onClick={() => handleRescheduleBooking(b.id)}
+                              className="block w-full px-4 py-3 text-left text-sm text-gray-600 transition hover:bg-sky-50 hover:text-sky-700"
+                            >
+                              Reschedule
+                            </button>
+
+                            <button
+                              onClick={() => handleCancelBooking(b.id)}
+                              className="block w-full px-4 py-3 text-left text-sm text-red-500 transition hover:bg-red-50"
+                            >
+                              Cancel appointment
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="flex items-start justify-between gap-6 pr-12">
+                      <div>
+                        <p className="font-semibold text-gray-900">{b.physician_name}</p>
+                        <p className="text-sm text-sky-500">{b.specialty}</p>
+                        <p className="mt-1 text-sm text-gray-500">
+                          {b.display_date} at {b.time}
+                        </p>
+                        <p className="mt-1 text-xs text-gray-400 italic">"{b.reason}"</p>
+                      </div>
+
+                      <span
+                        className={`mt-10 rounded-full px-3 py-1 text-xs font-semibold capitalize ${STATUS_STYLES[b.status]}`}
+                      >
+                        {b.status}
+                      </span>
                     </div>
-                    <span className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${STATUS_STYLES[b.status]}`}>
-                      {b.status}
-                    </span>
                   </div>
                 ))}
               </div>
