@@ -278,6 +278,105 @@ def get_physician_bookings():
 
 
 # ---------------------------------------------------------------------------
+# GET /api/bookings/past-patients
+# Physician sees completed patients grouped by patient
+# ---------------------------------------------------------------------------
+@bookings_bp.route("/past-patients", methods=["GET"])
+@jwt_required()
+def get_past_patients():
+    user_id = int(get_jwt_identity())
+    claims = get_jwt()
+
+    if claims.get("role") != "physician":
+        return jsonify({"error": "Only physicians can view past patients."}), 403
+
+    conn = get_db()
+
+    physician = conn.execute(
+        """
+        SELECT id
+        FROM physician_profiles
+        WHERE user_id = ?
+        """,
+        (user_id,),
+    ).fetchone()
+
+    if not physician:
+        conn.close()
+        return jsonify({"error": "Physician profile not found."}), 404
+
+    rows = conn.execute(
+        """
+        SELECT
+            b.id AS booking_id,
+            b.patient_id,
+            b.reason,
+            b.physician_notes,
+            b.completed_at,
+            b.patient_name,
+            b.patient_email,
+            b.patient_phone,
+            s.display_date,
+            s.date,
+            s.time,
+            u.full_name,
+            u.email,
+            pp.phone,
+            pp.date_of_birth,
+            pp.allergies,
+            pp.medications,
+            pp.medical_conditions,
+            pp.medical_notes,
+            pp.emergency_contact_name,
+            pp.emergency_contact_phone
+        FROM bookings b
+        JOIN appointment_slots s ON s.id = b.slot_id
+        LEFT JOIN users u ON u.id = b.patient_id
+        LEFT JOIN patient_profiles pp ON pp.user_id = b.patient_id
+        WHERE b.physician_id = ?
+          AND b.status = 'completed'
+        ORDER BY s.date DESC, s.time DESC
+        """,
+        (physician["id"],),
+    ).fetchall()
+
+    patients = {}
+
+    for r in rows:
+        patient_id = r["patient_id"]
+
+        if patient_id not in patients:
+            patients[patient_id] = {
+                "patient_id": patient_id,
+                "full_name": r["full_name"] or r["patient_name"],
+                "email": r["email"] or r["patient_email"],
+                "phone": r["phone"] or r["patient_phone"] or "",
+                "date_of_birth": r["date_of_birth"] or "",
+                "allergies": r["allergies"] or "",
+                "medications": r["medications"] or "",
+                "medical_conditions": r["medical_conditions"] or "",
+                "medical_notes": r["medical_notes"] or "",
+                "emergency_contact_name": r["emergency_contact_name"] or "",
+                "emergency_contact_phone": r["emergency_contact_phone"] or "",
+                "appointments": [],
+            }
+
+        patients[patient_id]["appointments"].append({
+            "id": r["booking_id"],
+            "reason": r["reason"],
+            "physician_notes": r["physician_notes"] or "",
+            "completed_at": r["completed_at"] or "",
+            "display_date": r["display_date"],
+            "date": r["date"],
+            "time": r["time"],
+        })
+
+    conn.close()
+
+    return jsonify(list(patients.values())), 200
+
+
+# ---------------------------------------------------------------------------
 # GET /api/bookings/<id>/patient-detail
 # Physician views patient profile + past visits for a specific appointment
 # ---------------------------------------------------------------------------
