@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ChevronsRight, Maximize2, Minimize2 } from "lucide-react";
 import { motion } from "framer-motion";
+import CompleteAppointmentModal from "./CompleteAppointmentModal";
 
 interface Booking {
   id: number;
@@ -75,6 +76,7 @@ export default function PatientDetailDrawer({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
+  const [completeModalOpen, setCompleteModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchPatientDetails = async () => {
@@ -123,6 +125,7 @@ export default function PatientDetailDrawer({
       }
 
       onCompleted(booking.id);
+      setCompleteModalOpen(false);
     } catch (err: unknown) {
       setError((err as Error).message);
     } finally {
@@ -378,7 +381,7 @@ const handleDecline = async () => {
       <button
         type="button"
         disabled={saving || booking.status === "completed"}
-        onClick={handleComplete}
+        onClick={() => setCompleteModalOpen(true)}
         className={[
           "mt-4 w-full rounded-xl py-3 text-sm font-semibold text-white transition",
           saving || booking.status === "completed"
@@ -394,7 +397,18 @@ const handleDecline = async () => {
                    </div>
         )}
       </div>
+
        </motion.aside>
+       {completeModalOpen && patient && (
+  <CompleteAppointmentModal
+    patientName={patient.full_name || booking.patient_name}
+    appointmentLabel={`${booking.display_date} at ${booking.time}`}
+    notes={notes}
+    loading={saving}
+    onClose={() => setCompleteModalOpen(false)}
+    onConfirm={handleComplete}
+  />
+)}
    
   </motion.div>
 );

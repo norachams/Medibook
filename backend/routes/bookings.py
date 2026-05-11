@@ -38,6 +38,25 @@ def create_booking():
 
     conn = get_db()
 
+    # Prevent duplicate active bookings with the same physician
+    active_booking = conn.execute(
+        """
+        SELECT id
+        FROM bookings
+        WHERE patient_id = ?
+        AND physician_id = ?
+        AND status IN ('pending', 'confirmed')
+        LIMIT 1
+        """,
+        (patient_id, physician_id),
+    ).fetchone()
+
+    if active_booking:
+        conn.close()
+        return jsonify({
+            "error": "You already have an active booking with this physician."
+        }), 409
+
     # Confirm the slot exists and is still available
     slot = conn.execute(
         "SELECT * FROM appointment_slots WHERE id = ? AND physician_id = ? AND is_available = 1",
@@ -711,7 +730,7 @@ def check_active_booking(physician_id):
         FROM bookings
         WHERE patient_id = ?
           AND physician_id = ?
-          AND status != 'cancelled'
+          AND status IN ('pending', 'confirmed')
         LIMIT 1
         """,
         (patient_id, physician_id),
@@ -789,9 +808,9 @@ def reschedule_booking(booking_id):
         conn.close()
         return jsonify({"error": "Booking not found."}), 404
 
-    if booking["status"] == "cancelled":
+    if booking["status"] in ["cancelled", "completed"]:
         conn.close()
-        return jsonify({"error": "Cannot reschedule a cancelled booking."}), 409
+        return jsonify({"error": "Cannot reschedule a cancelled or completed booking."}), 409
 
     # Confirm the new slot is available
     new_slot = conn.execute(
