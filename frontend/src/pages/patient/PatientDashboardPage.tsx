@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import CancelAppointmentModal from "../../components/CancelAppointmentModal";
+import { AnimatePresence, motion } from "framer-motion";
  
 interface Booking {
   id: number;
@@ -154,10 +155,15 @@ const handleCancel = async (bookingId: number, cancelReason: string) => {
 
 
   <div ref={menuRef} className="relative">
-  <button
-    onClick={() => setProfileMenuOpen(!profileMenuOpen)}
-    className="flex items-center gap-3 rounded-2xl border border-sky-100 bg-white/85 px-4 py-3 shadow-sm transition hover:shadow-md"
-  >
+ <button
+  onClick={() => setProfileMenuOpen((open) => !open)}
+  className={[
+    "flex items-center gap-3 rounded-2xl px-4 py-3 text-left shadow-sm ring-1 transition",
+    profileMenuOpen
+      ? "bg-sky-50 ring-sky-100 shadow-md"
+      : "bg-white/85 ring-sky-100 hover:bg-sky-50/70 hover:shadow-md",
+  ].join(" ")}
+>
     <div className="text-right">
       <p className="text-sm font-semibold text-gray-900">
         {user?.name ?? "Patient"}
@@ -171,14 +177,21 @@ const handleCancel = async (bookingId: number, cancelReason: string) => {
 
   </button>
 
+  <AnimatePresence>
   {profileMenuOpen && (
-    <div className="absolute right-0 top-16 z-30 w-52 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-xl shadow-gray-200/60">
+    <motion.div
+      initial={{ opacity: 0, y: -6, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -6, scale: 0.98 }}
+      transition={{ duration: 0.18, ease: "easeOut" }}
+      className="absolute right-0 top-[4.75rem] z-40 w-full min-w-[280px] rounded-2xl border border-slate-100 bg-white p-2 shadow-xl shadow-slate-200/70"
+    >
       <button
         onClick={() => {
           setProfileMenuOpen(false);
           navigate("/patient/past-appointments");
         }}
-        className="block w-full px-4 py-3 text-left text-sm text-gray-600 transition hover:bg-sky-50 hover:text-sky-700"
+        className="flex w-full items-center rounded-xl px-4 py-3 text-left text-sm font-semibold text-slate-700 transition hover:bg-sky-50 hover:text-sky-700"
       >
         Past appointments
       </button>
@@ -188,21 +201,20 @@ const handleCancel = async (bookingId: number, cancelReason: string) => {
           setProfileMenuOpen(false);
           navigate("/patient/profile");
         }}
-        className="block w-full px-4 py-3 text-left text-sm text-gray-600 transition hover:bg-sky-50 hover:text-sky-700"
+        className="mt-1 flex w-full items-center rounded-xl px-4 py-3 text-left text-sm font-semibold text-slate-700 transition hover:bg-sky-50 hover:text-sky-700"
       >
         Edit profile
       </button>
 
-      <div className="border-t border-gray-100" />
-
       <button
         onClick={handleSignOut}
-        className="block w-full px-4 py-3 text-left text-sm text-red-500 transition hover:bg-red-50"
+        className="mt-1 flex w-full items-center rounded-xl px-4 py-3 text-left text-sm font-semibold text-red-500 transition hover:bg-red-50 hover:text-red-600"
       >
         Sign out
       </button>
-    </div>
+    </motion.div>
   )}
+</AnimatePresence>
 </div>
 
         </header>

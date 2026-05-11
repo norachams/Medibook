@@ -105,9 +105,7 @@ export default function PatientProfilePage() {
 
         <div className="rounded-3xl border border-gray-100 bg-white/95 p-8 shadow-xl shadow-gray-200/50">
           <div className="mb-8">
-            <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-sky-500">
-              Patient profile
-            </p>
+            
             <h1 className="text-3xl font-bold text-gray-900">
               Edit your information
             </h1>

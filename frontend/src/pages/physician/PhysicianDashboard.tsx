@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState,useRef } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import PatientDetailDrawer from "../../components/PatientDetailDrawer";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 
 type BookingStatus = "pending" | "confirmed" | "cancelled"| "completed";
 
@@ -365,7 +365,12 @@ const sortedTodayAppointments = useMemo(() => {
 
             <button
               onClick={() => setProfileOpen((open) => !open)}
-              className="flex items-center gap-3 rounded-2xl bg-white px-5 py-3 text-left shadow-sm ring-1 ring-slate-100 transition hover:shadow-md"
+              className={[
+                "flex items-center gap-3 rounded-2xl px-5 py-3 text-left shadow-sm ring-1 transition",
+                profileOpen
+                  ? "bg-sky-50 ring-sky-100 shadow-md"
+                  : "bg-white ring-slate-100 hover:bg-sky-50/70 hover:shadow-md",
+              ].join(" ")}
             >
               <div>
                 <p className="text-sm font-bold text-slate-900">
@@ -380,26 +385,34 @@ const sortedTodayAppointments = useMemo(() => {
 
             </button>
 
-            {profileOpen && (
-              <div className="absolute right-0 top-16 z-30 w-56 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-xl shadow-gray-200/60">
-                  <button
-                  onClick={() => {
-                    setProfileOpen(false);
-                    navigate("/physician/past-patients");
-                  }}
-                  className="w-full rounded-xl px-4 py-3 text-left text-sm font-medium text-slate-700 transition hover:bg-sky-50 hover:text-sky-700"
-                >
-                  Past patients
-                </button>
+            <AnimatePresence>
+  {profileOpen && (
+    <motion.div
+      initial={{ opacity: 0, y: -6, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -6, scale: 0.98 }}
+      transition={{ duration: 0.18, ease: "easeOut" }}
+      className="absolute right-0 top-[4.75rem] z-40 w-full min-w-[280px] rounded-2xl border border-slate-100 bg-white p-2 shadow-xl shadow-slate-200/70"
+    >
+      <button
+        onClick={() => {
+          setProfileOpen(false);
+          navigate("/physician/past-patients");
+        }}
+        className="flex w-full items-center rounded-xl px-4 py-3 text-left text-sm font-semibold text-slate-700 transition hover:bg-sky-50 hover:text-sky-700"
+      >
+        Past patients
+      </button>
 
-                <button
-                  onClick={handleSignOut}
-                  className="w-full rounded-xl px-4 py-3 text-left text-sm font-medium text-red-500 transition hover:bg-red-50"
-                >
-                  Sign out
-                </button>
-              </div>
-            )}
+      <button
+        onClick={handleSignOut}
+        className="mt-1 flex w-full items-center rounded-xl px-4 py-3 text-left text-sm font-semibold text-red-500 transition hover:bg-red-50 hover:text-red-600"
+      >
+        Sign out
+      </button>
+    </motion.div>
+  )}
+</AnimatePresence>
           </div>
           </div>
         </header>
