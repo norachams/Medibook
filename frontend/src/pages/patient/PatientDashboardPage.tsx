@@ -11,7 +11,7 @@ interface Booking {
   patient_email: string;
   patient_phone: string;
   physician_name: string;
-  physician_id: number;   // needed to navigate to the right physician for reschedule
+  physician_id: number;   
   specialty: string;
   display_date: string;
   time: string;
@@ -113,7 +113,6 @@ const handleCancel = async (bookingId: number) => {
         <header className="mb-8 flex items-center justify-between">
           <div>
             <h1 className="text-4xl font-light tracking-tight text-sky-600">MediBook</h1>
-            <p className="mt-1 text-sm text-gray-500">Patient dashboard</p>
           </div>
 
 
@@ -126,7 +125,7 @@ const handleCancel = async (bookingId: number) => {
       <p className="text-sm font-semibold text-gray-900">
         {user?.name ?? "Patient"}
       </p>
-      <p className="text-xs font-medium text-gray-400">Patient account</p>
+      <p className="text-xs font-medium text-gray-400">Patient </p>
     </div>
 
     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-sky-100 text-sm font-semibold text-sky-700">

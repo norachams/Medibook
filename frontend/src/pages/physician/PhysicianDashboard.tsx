@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 type BookingStatus = "pending" | "confirmed" | "cancelled";
 
@@ -28,6 +29,8 @@ interface Booking {
 }
 
 const API = "http://localhost:8000/api/bookings";
+
+
 
 const STATUS_STYLES: Record<BookingStatus, string> = {
   pending: "bg-amber-50 text-amber-700 border-amber-100",
@@ -67,14 +70,85 @@ function StatusBadge({ status }: { status: BookingStatus }) {
   );
 }
 
+function buildWeekDays() {
+  const today = new Date();
+
+  const monday = new Date(today);
+  const dayOfWeek = today.getDay();
+  const daysFromMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  monday.setDate(today.getDate() + daysFromMonday);
+
+  return Array.from({ length: 5 }, (_, index) => {
+    const date = new Date(monday);
+    date.setDate(monday.getDate() + index);
+
+    return {
+      key: date.toISOString().slice(0, 10),
+      weekday: date.toLocaleDateString("en-US", { weekday: "short" }),
+      dateLabel: date.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      }),
+      fullLabel: date.toLocaleDateString("en-US", {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      }),
+      isToday: date.toDateString() === today.toDateString(),
+    };
+  });
+}
+
+function groupBookingsByDate(bookings: Booking[]) {
+  return bookings.reduce<Record<string, Booking[]>>((groups, booking) => {
+    const date = getDisplayDate(booking);
+
+    if (!groups[date]) {
+      groups[date] = [];
+    }
+
+    groups[date].push(booking);
+    return groups;
+  }, {});
+}
+
+
+
 export default function PhysicianDashboard() {
-  const { token, user } = useAuth();
+  const { token, user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const currentUser = user as
+  | {
+      full_name?: string;
+      fullName?: string;
+      name?: string;
+      email?: string;
+    }
+  | null
+  | undefined;
+
+const doctorName =
+  currentUser?.full_name ??
+  currentUser?.fullName ??
+  currentUser?.name ??
+  "Physician";
 
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [requestsOpen, setRequestsOpen] = useState(false);
-  const [view, setView] = useState<"upcoming" | "day">("upcoming");
+  const [view, setView] = useState<"upcoming" | "schedule">("upcoming");
+  const [scheduleView, setScheduleView] = useState<"day" | "week" | "month">("week");
   const [error, setError] = useState("");
+  const [profileOpen, setProfileOpen] = useState(false);
+
+
+  function handleSignOut() {
+  setProfileOpen(false);
+  logout();
+  navigate("/login");
+}
+
 
   async function loadBookings() {
     try {
@@ -141,6 +215,8 @@ export default function PhysicianDashboard() {
     [bookings]
   );
 
+  const weekDays = useMemo(() => buildWeekDays(), []);
+
   const upcomingAppointments = useMemo(
     () =>
       bookings.filter(
@@ -150,9 +226,12 @@ export default function PhysicianDashboard() {
     [bookings]
   );
 
-  const confirmedCount = bookings.filter(
-    (booking) => booking.status === "confirmed"
-  ).length;
+  const appointmentsByDate = useMemo(
+  () => groupBookingsByDate(upcomingAppointments),
+  [upcomingAppointments]
+);
+
+
 
   const firstDayLabel =
     upcomingAppointments.length > 0
@@ -162,14 +241,11 @@ export default function PhysicianDashboard() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-sky-50 to-blue-100 px-6 py-8 text-slate-900">
       <div className="mx-auto max-w-7xl">
-        <header className="mb-10 flex items-start justify-between gap-6">
-          <div>
+        <header className="relative z-30 mb-10 flex items-start justify-between gap-6">          <div>
             <h1 className="text-4xl font-light tracking-tight text-sky-600">
               MediBook
             </h1>
-            <p className="mt-1 text-base text-slate-500">
-              Physician dashboard
-            </p>
+           
           </div>
 
           <div className="flex items-center gap-4">
@@ -186,20 +262,47 @@ export default function PhysicianDashboard() {
               )}
             </button>
 
-            <button className="flex items-center gap-3 rounded-2xl bg-white px-5 py-3 text-left shadow-sm ring-1 ring-slate-100">
+
+            <div className="relative">
+            <button
+              onClick={() => setProfileOpen((open) => !open)}
+              className="flex items-center gap-3 rounded-2xl bg-white px-5 py-3 text-left shadow-sm ring-1 ring-slate-100 transition hover:bg-slate-50"
+            >
               <div>
                 <p className="text-sm font-bold text-slate-900">
-                  {user?.email ?? "Physician"}
+                  {doctorName}
                 </p>
-                <p className="text-xs text-slate-500">Physician account</p>
+                <p className="text-xs text-slate-500">Physician </p>
               </div>
 
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-sky-100 text-sm font-bold text-sky-700">
-                {getInitials(user?.email ?? "DR")}
+                {getInitials(doctorName)}
               </div>
 
               <span className="text-slate-400">⌄</span>
             </button>
+
+            {profileOpen && (
+              <div className="absolute right-0 top-16 z-30 w-56 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-xl shadow-gray-200/60">
+                  <button
+                  onClick={() => {
+                    setProfileOpen(false);
+                    navigate("/physician/past-patients");
+                  }}
+                  className="w-full rounded-xl px-4 py-3 text-left text-sm font-medium text-slate-700 transition hover:bg-sky-50 hover:text-sky-700"
+                >
+                  Past patients
+                </button>
+
+                <button
+                  onClick={handleSignOut}
+                  className="w-full rounded-xl px-4 py-3 text-left text-sm font-medium text-red-500 transition hover:bg-red-50"
+                >
+                  Sign out
+                </button>
+              </div>
+            )}
+          </div>
           </div>
         </header>
 
@@ -216,205 +319,276 @@ export default function PhysicianDashboard() {
         >
           <main className="rounded-[2rem] bg-white p-8 shadow-sm ring-1 ring-slate-100">
             <div className="mb-7 flex flex-col justify-between gap-4 md:flex-row md:items-center">
-              <div>
-                <h2 className="text-3xl font-bold tracking-tight">
-                  Upcoming appointments
-                </h2>
-                <p className="mt-2 text-slate-500">
-                  Start with the schedule, then open a day view when you need
-                  more detail.
-                </p>
-              </div>
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight">
+              {view === "upcoming" ? "Upcoming appointments" : "Schedule"}
+            </h2>
+          </div>
 
-              <div className="flex rounded-xl border border-slate-200 bg-slate-50 p-1">
-                <button
-                  onClick={() => setView("upcoming")}
-                  className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
-                    view === "upcoming"
-                      ? "bg-sky-100 text-sky-700"
-                      : "text-slate-500 hover:text-slate-800"
-                  }`}
-                >
-                  Upcoming
-                </button>
-                <button
-                  onClick={() => setView("day")}
-                  className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
-                    view === "day"
-                      ? "bg-sky-100 text-sky-700"
-                      : "text-slate-500 hover:text-slate-800"
-                  }`}
-                >
-                  Day view
-                </button>
-              </div>
+          <div className="flex items-center gap-3">
+            <div className="flex rounded-xl border border-slate-200 bg-slate-50 p-1">
+              <button
+                onClick={() => setView("upcoming")}
+                className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                  view === "upcoming"
+                    ? "bg-sky-100 text-sky-700"
+                    : "text-slate-500 hover:text-slate-800"
+                }`}
+              >
+                Upcoming
+              </button>
+
+              <button
+                onClick={() => setView("schedule")}
+                className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                  view === "schedule"
+                    ? "bg-sky-100 text-sky-700"
+                    : "text-slate-500 hover:text-slate-800"
+                }`}
+              >
+                Schedule
+              </button>
             </div>
+
+            {view === "schedule" && (
+              <select
+                value={scheduleView}
+                onChange={(e) =>
+                  setScheduleView(e.target.value as "day" | "week" | "month")
+                }
+                className="rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-semibold capitalize text-slate-700 shadow-sm outline-none transition hover:border-sky-200 focus:border-sky-400 focus:ring-2 focus:ring-sky-100"
+              >
+                <option value="day">Day</option>
+                <option value="week">Week</option>
+                <option value="month">Month</option>
+              </select>
+            )}
+          </div>
+        </div>
 
             {loading ? (
               <div className="rounded-3xl border border-slate-100 bg-slate-50 px-6 py-12 text-center text-slate-500">
                 Loading appointments...
               </div>
             ) : view === "upcoming" ? (
-              <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-                <section className="overflow-hidden rounded-3xl border border-slate-100">
-                  {upcomingAppointments.length > 0 ? (
-                    upcomingAppointments.map((appointment, index) => {
-                      const patientName = getPatientName(appointment);
+              <div>
+                <section className="space-y-6">
+  {upcomingAppointments.length > 0 ? (
+    Object.entries(appointmentsByDate).map(([date, appointments]) => (
+      <div key={date}>
+        <div className="mb-3 flex items-center justify-between">
+         <div className="mb-3">
+          <h3 className="text-lg font-bold text-slate-900">{date}</h3>
+          <p className="text-sm text-slate-500">
+            {appointments.length} appointment{appointments.length === 1 ? "" : "s"}
+          </p>
+        </div>
+        </div>
 
-                      return (
-                        <div
-                          key={appointment.id}
-                          className={`grid gap-4 px-5 py-5 md:grid-cols-[56px_1.1fr_0.7fr_1fr_auto] md:items-center ${
-                            index !== upcomingAppointments.length - 1
-                              ? "border-b border-slate-100"
-                              : ""
-                          }`}
-                        >
-                          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-sky-50 text-sm font-bold text-sky-700">
-                            {getInitials(patientName)}
-                          </div>
+        <div className="overflow-hidden rounded-3xl border border-slate-100 bg-white">
+          {appointments.map((appointment, index) => {
+            const patientName = getPatientName(appointment);
 
-                          <div>
-                            <p className="font-bold text-slate-900">
-                              {patientName}
-                            </p>
-                            <p className="text-sm text-slate-500">
-                              {getDisplayDate(appointment)}
-                            </p>
-                          </div>
+            return (
+              <div
+                key={appointment.id}
+                className={`grid gap-4 px-5 py-5 md:grid-cols-[56px_1.1fr_0.7fr_1fr_auto] md:items-center ${
+                  index !== appointments.length - 1
+                    ? "border-b border-slate-100"
+                    : ""
+                }`}
+              >
+                <div className="flex h-11 w-11 items-center justify-center rounded-full bg-sky-50 text-sm font-bold text-sky-700">
+                  {getInitials(patientName)}
+                </div>
 
-                          <div>
-                            <p className="font-semibold text-slate-900">
-                              {appointment.time}
-                            </p>
-                            <p className="text-sm text-slate-500">30 min</p>
-                          </div>
+                <div>
+                  <p className="font-bold text-slate-900">{patientName}</p>
+                  <p className="text-sm text-slate-500">Patient</p>
+                </div>
 
-                          <div>
-                            <p className="font-semibold text-slate-900">
-                              {appointment.reason}
-                            </p>
-                            <p className="text-sm text-slate-500">
-                              Visit request
-                            </p>
-                          </div>
+                <div>
+                  <p className="font-semibold text-slate-900">
+                    {appointment.time}
+                  </p>
+                  <p className="text-sm text-slate-500">30 min</p>
+                </div>
 
-                          <StatusBadge status={appointment.status} />
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <div className="px-6 py-14 text-center">
-                      <h3 className="font-bold text-slate-900">
-                        No upcoming appointments
-                      </h3>
-                      <p className="mt-2 text-sm text-slate-500">
-                        Confirmed and pending bookings will appear here.
+                <div>
+                  <p className="font-semibold text-slate-900">
+                    {appointment.reason}
+                  </p>
+                  <p className="text-sm text-slate-500">Reason for visit</p>
+                </div>
+
+                <StatusBadge status={appointment.status} />
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    ))
+  ) : (
+    <div className="rounded-3xl border border-slate-100 bg-slate-50 px-6 py-14 text-center">
+      <h3 className="font-bold text-slate-900">
+        No upcoming appointments
+      </h3>
+      <p className="mt-2 text-sm text-slate-500">
+        Confirmed and pending bookings will appear here.
+      </p>
+    </div>
+  )}
+</section>
+
+              </div>
+       
+  ) : (
+  <section>
+    {scheduleView === "day" && (
+      <div className="rounded-3xl border border-slate-100 bg-slate-50 p-5">
+        <div className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-100">
+          <h4 className="mb-4 font-bold text-slate-900">{firstDayLabel}</h4>
+
+          <div className="space-y-3">
+            {upcomingAppointments.length > 0 ? (
+              upcomingAppointments.map((appointment) => (
+                <div
+                  key={appointment.id}
+                  className="flex items-center justify-between gap-4 rounded-2xl border border-slate-100 bg-sky-50 px-5 py-4"
+                >
+                  <div>
+                    <p className="font-bold text-slate-900">
+                      {appointment.time} · {getPatientName(appointment)}
+                    </p>
+                    <p className="text-sm text-slate-500">
+                      {appointment.reason}
+                    </p>
+                  </div>
+
+                  <StatusBadge status={appointment.status} />
+                </div>
+              ))
+            ) : (
+              <p className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-5 py-8 text-center text-sm text-slate-500">
+                No appointments scheduled.
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+    )}
+
+    {scheduleView === "week" && (
+      <div className="grid gap-3 md:grid-cols-5">
+        {weekDays.map((day) => {
+          const dayAppointments = upcomingAppointments.filter(
+            (appointment) => getDisplayDate(appointment) === day.fullLabel
+          );
+
+          return (
+            <div
+              key={day.key}
+              className={`min-h-[260px] rounded-3xl p-4 shadow-sm ring-1 transition ${
+                day.isToday
+                  ? "bg-sky-50 ring-sky-200"
+                  : "bg-white ring-slate-100"
+              }`}
+            >
+              <div className="mb-4 flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-bold text-slate-900">{day.weekday}</p>
+                  <p className="mt-1 text-sm text-slate-500">
+                    {day.dateLabel}
+                  </p>
+                </div>
+
+                {day.isToday && (
+                  <span className="rounded-full bg-sky-100 px-3 py-1 text-xs font-bold text-sky-700">
+                    Today
+                  </span>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                {dayAppointments.length > 0 ? (
+                  dayAppointments.map((appointment) => (
+                    <div
+                      key={appointment.id}
+                      className="rounded-2xl bg-white p-3 shadow-sm ring-1 ring-sky-100"
+                    >
+                      <p className="text-sm font-bold text-slate-900">
+                        {appointment.time}
+                      </p>
+                      <p className="text-sm text-slate-600">
+                        {getPatientName(appointment)}
+                      </p>
+                      <p className="mt-1 line-clamp-2 text-xs text-slate-400">
+                        {appointment.reason}
                       </p>
                     </div>
-                  )}
-                </section>
-
-                <aside className="rounded-3xl border border-slate-100 bg-slate-50 p-5">
-                  <div className="mb-5 flex items-center justify-between">
-                    <h3 className="text-lg font-bold">Schedule snapshot</h3>
-                    <p className="text-sm text-slate-400">
-                      {confirmedCount} confirmed
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-100">
-                    <p className="font-bold text-slate-900">{firstDayLabel}</p>
-                    <p className="mt-1 text-sm text-slate-500">
-                      {upcomingAppointments.length} appointments to review
-                    </p>
-
-                    <button
-                      onClick={() => setView("day")}
-                      className="mt-4 text-sm font-bold text-sky-600 hover:text-sky-700"
-                    >
-                      View day
-                    </button>
-                  </div>
-
-                  <div className="mt-5 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-100">
-                    <p className="text-sm font-bold text-slate-900">
-                      Booking requests
-                    </p>
-                    <p className="mt-1 text-sm text-slate-500">
-                      {pendingRequests.length} requests waiting for a response.
-                    </p>
-
-                    <button
-                      onClick={() => setRequestsOpen(true)}
-                      className="mt-4 rounded-xl bg-sky-500 px-4 py-2 text-sm font-bold text-white hover:bg-sky-600"
-                    >
-                      Review requests
-                    </button>
-                  </div>
-                </aside>
+                  ))
+                ) : (
+                  <p className="text-sm text-slate-400">No visits</p>
+                )}
               </div>
-            ) : (
-              <section className="rounded-3xl border border-slate-100 bg-slate-50 p-5">
-                <div className="mb-5 flex items-center justify-between">
-                  <div>
-                    <h3 className="text-xl font-bold">{firstDayLabel}</h3>
-                    <p className="text-sm text-slate-500">
-                      Detailed day schedule
-                    </p>
-                  </div>
+            </div>
+          );
+        })}
+      </div>
+    )}
 
-                  <button
-                    onClick={() => setView("upcoming")}
-                    className="rounded-xl bg-white px-4 py-2 text-sm font-bold text-sky-600 shadow-sm ring-1 ring-slate-100"
-                  >
-                    Back to upcoming
-                  </button>
-                </div>
+    {scheduleView === "month" && (
+      <div className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-100">
+        <div className="mb-4 flex items-center justify-between">
+          <h4 className="font-bold text-slate-900">May 2026</h4>
+          <p className="text-sm text-slate-500">
+            {upcomingAppointments.length} appointments
+          </p>
+        </div>
 
-                <div className="space-y-0 rounded-3xl bg-white p-4 shadow-sm ring-1 ring-slate-100">
-                  {["8 AM", "9 AM", "10 AM", "11 AM", "12 PM", "1 PM", "2 PM", "3 PM", "4 PM"].map(
-                    (hour) => (
-                      <div
-                        key={hour}
-                        className="grid min-h-[76px] grid-cols-[80px_1fr] border-b border-slate-100 last:border-b-0"
-                      >
-                        <div className="pt-4 text-sm font-medium text-slate-400">
-                          {hour}
-                        </div>
+        <div className="grid grid-cols-7 gap-2 text-center text-xs font-semibold text-slate-400">
+          {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+            <div key={day}>{day}</div>
+          ))}
+        </div>
 
-                        <div className="relative border-l border-slate-100 pl-5">
-                          {upcomingAppointments
-                            .filter((appointment) =>
-                              appointment.time.startsWith(
-                                hour.replace(" AM", ":").replace(" PM", ":")
-                              )
-                            )
-                            .map((appointment) => (
-                              <div
-                                key={appointment.id}
-                                className="my-3 rounded-2xl border border-sky-100 bg-sky-50 p-4"
-                              >
-                                <div className="flex items-start justify-between gap-3">
-                                  <div>
-                                    <p className="font-bold text-slate-900">
-                                      {getPatientName(appointment)}
-                                    </p>
-                                    <p className="text-sm text-slate-500">
-                                      {appointment.time} · {appointment.reason}
-                                    </p>
-                                  </div>
-                                  <StatusBadge status={appointment.status} />
-                                </div>
-                              </div>
-                            ))}
-                        </div>
-                      </div>
-                    )
-                  )}
-                </div>
-              </section>
-            )}
+        <div className="mt-3 grid grid-cols-7 gap-2 text-sm">
+          {Array.from({ length: 35 }, (_, index) => {
+            const day = index - 3;
+            const hasAppointment = upcomingAppointments.some((appointment) =>
+              getDisplayDate(appointment).includes(`May ${day}, 2026`)
+            );
+
+            return (
+              <div
+                key={index}
+                className={`min-h-[72px] rounded-2xl border p-2 ${
+                  day < 1 || day > 31
+                    ? "border-transparent text-slate-300"
+                    : hasAppointment
+                    ? "border-sky-100 bg-sky-50 text-slate-900"
+                    : "border-slate-100 bg-white text-slate-600"
+                }`}
+              >
+                {day >= 1 && day <= 31 && (
+                  <>
+                    <p className="font-semibold">{day}</p>
+                    {hasAppointment && (
+                      <p className="mt-2 rounded-full bg-sky-500 px-2 py-1 text-xs font-bold text-white">
+                        Visit
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    )}
+  </section>
+)}
+
           </main>
 
           {requestsOpen && (
@@ -431,9 +605,7 @@ export default function PhysicianDashboard() {
                     </span>
                   </div>
 
-                  <p className="mt-1 text-sm text-slate-500">
-                    Patients waiting for approval
-                  </p>
+                 
                 </div>
 
                 <button
