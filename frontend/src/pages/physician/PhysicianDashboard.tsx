@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState,useRef } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 
@@ -141,6 +141,26 @@ const doctorName =
   const [scheduleView, setScheduleView] = useState<"day" | "week" | "month">("week");
   const [error, setError] = useState("");
   const [profileOpen, setProfileOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+  function handleClickOutside(event: MouseEvent) {
+    if (
+      menuRef.current &&
+      !menuRef.current.contains(event.target as Node)
+    ) {
+      setProfileOpen(false);
+    }
+  }
+
+  document.addEventListener("mousedown", handleClickOutside);
+
+  return () => {
+    document.removeEventListener("mousedown", handleClickOutside);
+  };
+}, []);
+
+  
 
 
   function handleSignOut() {
@@ -202,6 +222,7 @@ const doctorName =
     }
   }
 
+  
   useEffect(() => {
     if (token) {
       (async () => {
@@ -263,10 +284,11 @@ const doctorName =
             </button>
 
 
-            <div className="relative">
+             <div ref={menuRef} className="relative">
+
             <button
               onClick={() => setProfileOpen((open) => !open)}
-              className="flex items-center gap-3 rounded-2xl bg-white px-5 py-3 text-left shadow-sm ring-1 ring-slate-100 transition hover:bg-slate-50"
+              className="flex items-center gap-3 rounded-2xl bg-white px-5 py-3 text-left shadow-sm ring-1 ring-slate-100 transition hover:shadow-md"
             >
               <div>
                 <p className="text-sm font-bold text-slate-900">
@@ -279,7 +301,6 @@ const doctorName =
                 {getInitials(doctorName)}
               </div>
 
-              <span className="text-slate-400">⌄</span>
             </button>
 
             {profileOpen && (

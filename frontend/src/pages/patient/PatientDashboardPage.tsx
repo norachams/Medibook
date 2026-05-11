@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import CancelAppointmentModal from "../../components/CancelAppointmentModal";
  
 interface Booking {
   id: number;
@@ -28,11 +29,31 @@ export default function PatientDashboardPage() {
   const navigate        = useNavigate();
   const { token, user, logout} = useAuth();
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState<string | null>(null);
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
-  const [cancelling, setCancelling] = useState<number | null>(null); // tracks which booking is being cancelled
+  const [cancelling, setCancelling] = useState<number | null>(null); 
+  const [bookingToCancel, setBookingToCancel] = useState<Booking | null>(null);
+  const [cancelSuccess, setCancelSuccess] = useState<string | null>(null);
+
+  useEffect(() => {
+  function handleClickOutside(event: MouseEvent) {
+    if (
+      menuRef.current &&
+      !menuRef.current.contains(event.target as Node)
+    ) {
+      setProfileMenuOpen(false);
+    }
+  }
+
+  document.addEventListener("mousedown", handleClickOutside);
+
+  return () => {
+    document.removeEventListener("mousedown", handleClickOutside);
+  };
+}, []);
 
 
   useEffect(() => {
@@ -48,38 +69,52 @@ export default function PatientDashboardPage() {
       .finally(() => setLoading(false));
   }, [token]);
  
-  // Derive counts from real data
-  const counts = {
-    upcoming:  bookings.filter((b) => b.status === "confirmed").length,
-    pending:   bookings.filter((b) => b.status === "pending").length,
-    confirmed: bookings.filter((b) => b.status === "confirmed").length,
-  };
+  // // Derive counts from real data
+  // const counts = {
+  //   upcoming:  bookings.filter((b) => b.status === "confirmed").length,
+  //   pending:   bookings.filter((b) => b.status === "pending").length,
+  //   confirmed: bookings.filter((b) => b.status === "confirmed").length,
+  // };
 
   const handleSignOut = () => {
   logout();
   navigate("/login");
 };
 
-// ── Cancel ───────────────────────────────────────────────────────────────
-const handleCancel = async (bookingId: number) => {
-    setCancelling(bookingId);
-    setOpenMenuId(null);
-    try {
-      const res = await fetch(
-        `http://localhost:8000/api/bookings/${bookingId}/cancel`,
-        { method: "PATCH", headers: { Authorization: `Bearer ${token}` } }
-      );
-      if (!res.ok) throw new Error();
-      // Update status in place — no full refetch needed
-      setBookings((prev) =>
-        prev.map((b) => b.id === bookingId ? { ...b, status: "cancelled" } : b)
-      );
-    } catch {
-      setError("Could not cancel appointment. Try again.");
-    } finally {
-      setCancelling(null);
-    }
-  };
+const handleCancel = async (bookingId: number, cancelReason: string) => {
+  setCancelling(bookingId);
+  setOpenMenuId(null);
+  setError(null);
+
+  try {
+    const res = await fetch(
+      `http://localhost:8000/api/bookings/${bookingId}/cancel`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ cancel_reason: cancelReason }),
+      }
+    );
+
+    if (!res.ok) throw new Error();
+
+    setBookings((prev) => prev.filter((b) => b.id !== bookingId));
+
+    setBookingToCancel(null);
+    setCancelSuccess("Appointment cancelled successfully, you will receive a confirmation email shortly.");
+
+    setTimeout(() => {
+      setCancelSuccess(null);
+    }, 3500);
+  } catch {
+    setError("Could not cancel appointment. Try again.");
+  } finally {
+    setCancelling(null);
+  }
+};
  
   // ── Reschedule — navigate to the physician page, pass booking id as state ─
   // PhysicianPage will detect this and switch to reschedule mode
@@ -116,10 +151,10 @@ const handleCancel = async (bookingId: number) => {
           </div>
 
 
-          <div className="relative">
+  <div ref={menuRef} className="relative">
   <button
     onClick={() => setProfileMenuOpen(!profileMenuOpen)}
-    className="flex items-center gap-3 rounded-2xl border border-sky-100 bg-white/85 px-4 py-3 shadow-sm transition hover:bg-white"
+    className="flex items-center gap-3 rounded-2xl border border-sky-100 bg-white/85 px-4 py-3 shadow-sm transition hover:shadow-md"
   >
     <div className="text-right">
       <p className="text-sm font-semibold text-gray-900">
@@ -132,7 +167,6 @@ const handleCancel = async (bookingId: number) => {
       {user?.name?.[0] ?? "P"}
     </div>
 
-    <span className="text-xs text-gray-400">⌄</span>
   </button>
 
   {profileMenuOpen && (
@@ -170,10 +204,16 @@ const handleCancel = async (bookingId: number) => {
 </div>
 
         </header>
+
+        {cancelSuccess && (
+  <div className="mb-6 rounded-2xl border border-emerald-100 bg-emerald-50 px-5 py-4 text-sm font-medium text-emerald-700">
+    {cancelSuccess}
+  </div>
+)}
  
         <main className="space-y-6">
  
-          {/* Stats — derived from real bookings */}
+          {/* Stats — derived from real bookings
           <section className="rounded-3xl border border-gray-100 bg-white/95 p-6 shadow-xl shadow-gray-200/50">
             <div className="grid gap-3 sm:grid-cols-3">
               <div className="rounded-2xl bg-sky-50 p-4">
@@ -190,7 +230,7 @@ const handleCancel = async (bookingId: number) => {
               </div>
             </div>
           </section>
- 
+  */}
           {/* Bookings list */}
           <section className="rounded-3xl border border-gray-100 bg-white/95 p-8 shadow-xl shadow-gray-200/50">
             <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -204,6 +244,18 @@ const handleCancel = async (bookingId: number) => {
                 Book appointment
               </button>
             </div>
+
+            {loading && (
+                <div className="rounded-2xl bg-sky-50/60 px-6 py-10 text-center">
+                  <p className="text-sm text-gray-400">Loading appointments…</p>
+                </div>
+              )}
+
+              {error && (
+                <div className="rounded-2xl border border-red-100 bg-red-50 px-6 py-4 text-sm text-red-600">
+                  {error}
+                </div>
+              )}
  
             {!loading && !error && bookings.length > 0 && (
               <div className="flex flex-col gap-3">
@@ -266,7 +318,10 @@ const handleCancel = async (bookingId: number) => {
                                   </button>
                                   <button
                                     type="button"
-                                    onClick={() => handleCancel(b.id)}
+                                    onClick={() => {
+                                      setOpenMenuId(null);
+                                      setBookingToCancel(b);
+                                    }}
                                     disabled={cancelling === b.id}
                                     className="block w-full px-4 py-3 text-left text-sm text-red-500 transition hover:bg-red-50 disabled:opacity-50"
                                   >
@@ -274,6 +329,16 @@ const handleCancel = async (bookingId: number) => {
                                   </button>
                                 </div>
                               )}
+                              {bookingToCancel && (
+                              <CancelAppointmentModal
+                                appointmentLabel={`${bookingToCancel.physician_name} on ${bookingToCancel.display_date} at ${bookingToCancel.time}`}
+                                loading={cancelling === bookingToCancel.id}
+                                onClose={() => setBookingToCancel(null)}
+                                onConfirm={(cancelReason) =>
+                                  handleCancel(bookingToCancel.id, cancelReason)
+                                }
+                              />
+                            )}
                             </div>
                           )}
                         </div>
@@ -284,6 +349,18 @@ const handleCancel = async (bookingId: number) => {
                 })}
               </div>
             )}  
+
+              {!loading && !error && bookings.length === 0 && (
+              <div className="rounded-2xl border border-dashed border-sky-100 bg-sky-50/60 px-6 py-10 text-center">
+                <p className="text-base font-semibold text-gray-800">
+                  No upcoming appointments
+                </p>
+                <p className="mt-2 text-sm text-gray-500">
+                  You don’t have any appointments booked right now.
+                </p>
+              
+              </div>
+            )}
           </section>
         </main>
       </div>

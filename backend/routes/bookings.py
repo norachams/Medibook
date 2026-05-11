@@ -103,6 +103,7 @@ def get_my_bookings():
         JOIN users u               ON u.id  = pp.user_id
         JOIN appointment_slots s   ON s.id  = b.slot_id
         WHERE b.patient_id = ?
+        AND b.status != 'cancelled'
         ORDER BY b.created_at DESC
         """,
         (patient_id,),
