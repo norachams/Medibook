@@ -31,6 +31,47 @@ interface Booking {
 
 const API = "http://localhost:8000/api/bookings";
 
+const DAY_START_HOUR = 8;
+const DAY_END_HOUR = 18;
+const HOUR_HEIGHT = 88;
+
+const DAY_HOURS = Array.from(
+  { length: DAY_END_HOUR - DAY_START_HOUR + 1 },
+  (_, index) => DAY_START_HOUR + index
+);
+
+function formatHour(hour: number) {
+  if (hour === 12) return "12 PM";
+  if (hour > 12) return `${hour - 12} PM`;
+  return `${hour} AM`;
+}
+
+function timeToMinutes(time: string) {
+  const [rawTime, modifier] = time.split(" ");
+  const [rawHours, minutes] = rawTime.split(":").map(Number);
+  let hours = rawHours;
+
+  if (modifier === "PM" && hours !== 12) hours += 12;
+  if (modifier === "AM" && hours === 12) hours = 0;
+
+  return hours * 60 + minutes;
+}
+
+function appointmentTop(time: string) {
+  const startOfDay = DAY_START_HOUR * 60;
+  const minutesFromStart = timeToMinutes(time) - startOfDay;
+
+  return (minutesFromStart / 60) * HOUR_HEIGHT;
+}
+
+function getAppointmentCardStyle(status: BookingStatus) {
+  if (status === "pending") {
+    return "border-amber-200 bg-amber-50 hover:bg-amber-100/70";
+  }
+
+  return "border-sky-100 bg-white hover:bg-sky-50/70";
+}
+
 
 
 const STATUS_STYLES: Record<BookingStatus, string> = {
@@ -46,6 +87,27 @@ function getPatientName(booking: Booking) {
 
 function getDisplayDate(booking: Booking) {
   return booking.display_date ?? booking.displayDate ?? booking.date ?? "Upcoming";
+}
+
+function getBookingDateKey(booking: Booking) {
+  return booking.date ?? "";
+}
+
+function getTodayKey() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function formatDateHeading(dateString: string) {
+  if (!dateString) return "Upcoming";
+
+  const date = new Date(`${dateString}T00:00:00`);
+
+  return date.toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 function getCreatedAt(booking: Booking) {
@@ -86,47 +148,47 @@ function StatusBadge({ status }: { status: BookingStatus }) {
   );
 }
 
-function buildWeekDays() {
-  const today = new Date();
+// function buildWeekDays() {
+//   const today = new Date();
 
-  const monday = new Date(today);
-  const dayOfWeek = today.getDay();
-  const daysFromMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-  monday.setDate(today.getDate() + daysFromMonday);
+//   const monday = new Date(today);
+//   const dayOfWeek = today.getDay();
+//   const daysFromMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+//   monday.setDate(today.getDate() + daysFromMonday);
 
-  return Array.from({ length: 5 }, (_, index) => {
-    const date = new Date(monday);
-    date.setDate(monday.getDate() + index);
+//   return Array.from({ length: 5 }, (_, index) => {
+//     const date = new Date(monday);
+//     date.setDate(monday.getDate() + index);
 
-    return {
-      key: date.toISOString().slice(0, 10),
-      weekday: date.toLocaleDateString("en-US", { weekday: "short" }),
-      dateLabel: date.toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-      }),
-      fullLabel: date.toLocaleDateString("en-US", {
-        month: "long",
-        day: "numeric",
-        year: "numeric",
-      }),
-      isToday: date.toDateString() === today.toDateString(),
-    };
-  });
-}
+//     return {
+//       key: date.toISOString().slice(0, 10),
+//       weekday: date.toLocaleDateString("en-US", { weekday: "short" }),
+//       dateLabel: date.toLocaleDateString("en-US", {
+//         month: "short",
+//         day: "numeric",
+//       }),
+//       fullLabel: date.toLocaleDateString("en-US", {
+//         month: "long",
+//         day: "numeric",
+//         year: "numeric",
+//       }),
+//       isToday: date.toDateString() === today.toDateString(),
+//     };
+//   });
+// }
 
-function groupBookingsByDate(bookings: Booking[]) {
-  return bookings.reduce<Record<string, Booking[]>>((groups, booking) => {
-    const date = getDisplayDate(booking);
+// function groupBookingsByDate(bookings: Booking[]) {
+//   return bookings.reduce<Record<string, Booking[]>>((groups, booking) => {
+//     const date = getDisplayDate(booking);
 
-    if (!groups[date]) {
-      groups[date] = [];
-    }
+//     if (!groups[date]) {
+//       groups[date] = [];
+//     }
 
-    groups[date].push(booking);
-    return groups;
-  }, {});
-}
+//     groups[date].push(booking);
+//     return groups;
+//   }, {});
+// }
 
 
 
@@ -154,7 +216,7 @@ const doctorName =
   const [loading, setLoading] = useState(true);
   const [requestsOpen, setRequestsOpen] = useState(false);
   const [view, setView] = useState<"upcoming" | "schedule">("upcoming");
-  const [scheduleView, setScheduleView] = useState<"day" | "week" | "month">("week");
+  // const [scheduleView, setScheduleView] = useState<"day" | "week" | "month">("week");
   const [error, setError] = useState("");
   const [profileOpen, setProfileOpen] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
@@ -261,7 +323,7 @@ const doctorName =
     [bookings]
   );
 
-  const weekDays = useMemo(() => buildWeekDays(), []);
+  // const weekDays = useMemo(() => buildWeekDays(), []);
 
   const upcomingAppointments = useMemo(
     () =>
@@ -272,17 +334,46 @@ const doctorName =
     [bookings]
   );
 
-  const appointmentsByDate = useMemo(
-  () => groupBookingsByDate(upcomingAppointments),
-  [upcomingAppointments]
-);
+
+
+const appointmentsByDateKey = useMemo(() => {
+  return upcomingAppointments.reduce<Record<string, Booking[]>>((groups, booking) => {
+    const dateKey = getBookingDateKey(booking) || getDisplayDate(booking);
+
+    if (!groups[dateKey]) {
+      groups[dateKey] = [];
+    }
+
+    groups[dateKey].push(booking);
+    return groups;
+  }, {});
+}, [upcomingAppointments]);
+
+const todayAppointments = useMemo(() => {
+  const today = getTodayKey();
+
+  return upcomingAppointments.filter(
+    (booking) => getBookingDateKey(booking) === today
+  );
+}, [upcomingAppointments]);
+
+const sortedTodayAppointments = useMemo(() => {
+  return [...todayAppointments].sort(
+    (a, b) => timeToMinutes(a.time) - timeToMinutes(b.time)
+  );
+}, [todayAppointments]);
+
+//   const appointmentsByDate = useMemo(
+//   () => groupBookingsByDate(upcomingAppointments),
+//   [upcomingAppointments]
+// );
 
 
 
-  const firstDayLabel =
-    upcomingAppointments.length > 0
-      ? getDisplayDate(upcomingAppointments[0])
-      : "Today";
+  // const firstDayLabel =
+  //   upcomingAppointments.length > 0
+  //     ? getDisplayDate(upcomingAppointments[0])
+  //     : "Today";
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-sky-50 to-blue-100 px-6 py-8 text-slate-900">
@@ -366,9 +457,15 @@ const doctorName =
           <main className="rounded-[2rem] bg-white p-8 shadow-sm ring-1 ring-slate-100">
             <div className="mb-7 flex flex-col justify-between gap-4 md:flex-row md:items-center">
           <div>
-            <h2 className="text-3xl font-bold tracking-tight">
+            {/* <h2 className="text-3xl font-bold tracking-tight">
               {view === "upcoming" ? "Upcoming appointments" : "Schedule"}
+            </h2> */}
+            <h2 className="text-3xl font-bold tracking-tight">
+              Today's Schedule
             </h2>
+            {/* <p className="mt-1 text-sm text-slate-500">
+              Review today’s queue, manage requests, and open patient details from any appointment.
+            </p> */}
           </div>
 
           <div className="flex items-center gap-3">
@@ -381,7 +478,7 @@ const doctorName =
                     : "text-slate-500 hover:text-slate-800"
                 }`}
               >
-                Upcoming
+                Appointments
               </button>
 
               <button
@@ -396,7 +493,7 @@ const doctorName =
               </button>
             </div>
 
-            {view === "schedule" && (
+            {/* {view === "schedule" && (
               <select
                 value={scheduleView}
                 onChange={(e) =>
@@ -408,125 +505,262 @@ const doctorName =
                 <option value="week">Week</option>
                 <option value="month">Month</option>
               </select>
-            )}
+            )} */}
           </div>
         </div>
+        {/* {!loading && (
+  <section className="mb-8 rounded-[1.75rem] border border-sky-100 bg-sky-50/70 p-6">
+    <div className="mb-5 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-widest text-sky-500">
+          Today’s queue
+        </p>
+        <h3 className="mt-1 text-2xl font-bold text-slate-900">
+          {todayAppointments.length} appointment
+          {todayAppointments.length === 1 ? "" : "s"} today
+        </h3>
+      </div>
+
+      <p className="text-sm text-slate-500">
+        {new Date().toLocaleDateString("en-US", {
+          weekday: "long",
+          month: "long",
+          day: "numeric",
+        })}
+      </p>
+    </div>
+
+    {todayAppointments.length > 0 ? (
+      <div className="grid gap-3 md:grid-cols-2">
+        {todayAppointments.map((appointment) => {
+          const patientName = getPatientName(appointment);
+
+          return (
+            <button
+              key={appointment.id}
+              type="button"
+              onClick={() => setSelectedBooking(appointment)}
+              className="rounded-2xl border border-sky-100 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+            >
+              <div className="mb-3 flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-sky-100 text-sm font-bold text-sky-700">
+                    {getInitials(patientName)}
+                  </div>
+
+                  <div>
+                    <p className="font-bold text-slate-900">{patientName}</p>
+                    <p className="text-sm text-slate-500">{appointment.time}</p>
+                  </div>
+                </div>
+
+                <StatusBadge status={appointment.status} />
+              </div>
+
+              <p className="text-sm font-medium text-slate-700">
+                {appointment.reason || "No reason provided"}
+              </p>
+            </button>
+          );
+        })}
+      </div>
+    ) : (
+      <div className="rounded-2xl border border-dashed border-sky-200 bg-white/70 px-5 py-8 text-center">
+        <p className="font-bold text-slate-900">No appointments today</p>
+        <p className="mt-1 text-sm text-slate-500">
+          Your upcoming schedule will still appear below.
+        </p>
+      </div>
+    )}
+  </section>
+)} */}
 
             {loading ? (
               <div className="rounded-3xl border border-slate-100 bg-slate-50 px-6 py-12 text-center text-slate-500">
                 Loading appointments...
               </div>
-            ) : view === "upcoming" ? (
-              <div>
-                <section className="space-y-6">
-  {upcomingAppointments.length > 0 ? (
-    Object.entries(appointmentsByDate).map(([date, appointments]) => (
-      <div key={date}>
-        <div className="mb-3 flex items-center justify-between">
-         <div className="mb-3">
-          <h3 className="text-lg font-bold text-slate-900">{date}</h3>
-          <p className="text-sm text-slate-500">
-            {appointments.length} appointment{appointments.length === 1 ? "" : "s"}
-          </p>
-        </div>
-        </div>
-
-        <div className="overflow-hidden rounded-3xl border border-slate-100 bg-white">
-          {appointments.map((appointment, index) => {
-            const patientName = getPatientName(appointment);
-
-            return (
-              <div
-                key={appointment.id}
-                onClick={() => setSelectedBooking(appointment)}
-                className={`grid cursor-pointer gap-4 px-5 py-5 transition hover:bg-sky-50/50 md:grid-cols-[56px_1.1fr_0.7fr_1fr_auto] md:items-center ${
-                  index !== appointments.length - 1
-                    ? "border-b border-slate-100"
-                    : ""
-                }`}
-              >
-                <div className="flex h-11 w-11 items-center justify-center rounded-full bg-sky-50 text-sm font-bold text-sky-700">
-                  {getInitials(patientName)}
-                </div>
-
-                <div>
-                  <p className="font-bold text-slate-900">{patientName}</p>
-                  <p className="text-sm text-slate-500">Patient</p>
-                </div>
-
-                <div>
-                  <p className="font-semibold text-slate-900">
-                    {appointment.time}
-                  </p>
-                  <p className="text-sm text-slate-500">30 min</p>
-                </div>
-
-                <div>
-                  <p className="font-semibold text-slate-900">
-                    {appointment.reason}
-                  </p>
-                  <p className="text-sm text-slate-500">Reason for visit</p>
-                </div>
-
-                <StatusBadge status={appointment.status} />
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    ))
-  ) : (
-    <div className="rounded-3xl border border-slate-100 bg-slate-50 px-6 py-14 text-center">
-      <h3 className="font-bold text-slate-900">
-        No upcoming appointments
-      </h3>
-      <p className="mt-2 text-sm text-slate-500">
-        Confirmed and pending bookings will appear here.
-      </p>
-    </div>
-  )}
-</section>
-
-              </div>
-       
-  ) : (
+           ) : view === "upcoming" ? (
   <section>
-    {scheduleView === "day" && (
-      <div className="rounded-3xl border border-slate-100 bg-slate-50 p-5">
-        <div className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-100">
-          <h4 className="mb-4 font-bold text-slate-900">{firstDayLabel}</h4>
+    <div className="mb-6 flex items-center justify-between">
+      <div>
+        <h3 className="text-sm text-slate-500">
+          {new Date().toLocaleDateString("en-US", {
+            weekday: "long",
+            month: "long",
+            day: "numeric",
+          })}
+        </h3>
+      </div>
 
-          <div className="space-y-3">
-            {upcomingAppointments.length > 0 ? (
-              upcomingAppointments.map((appointment) => (
-                <div
-                    key={appointment.id}
-                    onClick={() => setSelectedBooking(appointment)}
-                    className="cursor-pointer rounded-2xl bg-white p-3 shadow-sm ring-1 ring-sky-100 transition hover:bg-sky-50"
-                  >
-                  <div>
-                    <p className="font-bold text-slate-900">
-                      {appointment.time} · {getPatientName(appointment)}
-                    </p>
-                    <p className="text-sm text-slate-500">
-                      {appointment.reason}
-                    </p>
+      {/* <button
+        type="button"
+        onClick={() => setView("schedule")}
+        className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+      >
+        View schedule
+      </button> */}
+    </div>
+
+    {sortedTodayAppointments.length > 0 ? (
+      <div className="relative rounded-3xl border border-slate-100 bg-white p-5">
+        <div className="absolute left-[86px] top-5 bottom-5 w-px bg-slate-100" />
+
+        <div className="relative">
+          {DAY_HOURS.map((hour) => (
+            <div
+              key={hour}
+              className="grid min-h-[88px] grid-cols-[86px_1fr] border-b border-slate-100 last:border-b-0"
+            >
+              <div className="pt-2 text-sm font-medium text-slate-400">
+                {formatHour(hour)}
+              </div>
+              <div />
+            </div>
+          ))}
+
+          <div className="absolute left-[106px] right-0 top-0">
+            {sortedTodayAppointments.map((appointment) => {
+              const patientName = getPatientName(appointment);
+
+              return (
+                <button
+                  key={appointment.id}
+                  type="button"
+                  onClick={() => setSelectedBooking(appointment)}
+                  style={{
+                    top: appointmentTop(appointment.time),
+                    height: 72,
+                  }}
+                  className={[
+                    "absolute left-0 right-0 rounded-2xl border px-4 py-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md",
+                    getAppointmentCardStyle(appointment.status),
+                  ].join(" ")}
+                >
+                  <div className="flex h-full items-center justify-between gap-4">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-sky-100 text-xs font-bold text-sky-700">
+                        {getInitials(patientName)}
+                      </div>
+
+                      <div className="min-w-0">
+                        <p className="truncate font-bold text-slate-900">
+                          {patientName}
+                        </p>
+                        <p className="truncate text-sm text-slate-500">
+                          {appointment.reason || "No reason provided"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="shrink-0 text-right">
+                      <p className="font-bold text-slate-900">
+                        {appointment.time}
+                      </p>
+                      {appointment.status === "pending" && (
+                        <p className="text-xs font-semibold text-amber-600">
+                          Needs review
+                        </p>
+                      )}
+                    </div>
                   </div>
-
-                  <StatusBadge status={appointment.status} />
-                </div>
-              ))
-            ) : (
-              <p className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-5 py-8 text-center text-sm text-slate-500">
-                No appointments scheduled.
-              </p>
-            )}
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
+    ) : (
+      <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 px-6 py-14 text-center">
+        <h3 className="font-bold text-slate-900">No appointments today</h3>
+        <p className="mt-2 text-sm text-slate-500">
+          Use the schedule tab to view upcoming appointments.
+        </p>
+      </div>
     )}
+  </section>
 
-    {scheduleView === "week" && (
+          
+ ) : (
+  <section className="space-y-5">
+    {/* <div className="rounded-3xl border border-slate-100 bg-slate-50 px-5 py-4">
+      <h3 className="text-lg font-bold text-slate-900">Full schedule</h3>
+      <p className="mt-1 text-sm text-slate-500">
+        Appointments are grouped by date. Click any appointment to open the patient drawer.
+      </p>
+    </div> */}
+
+    {upcomingAppointments.length > 0 ? (
+      Object.entries(appointmentsByDateKey).map(([dateKey, appointments]) => (
+        <div
+          key={dateKey}
+          className="overflow-hidden rounded-3xl border border-slate-100 bg-white"
+        >
+          <div className="border-b border-slate-100 bg-slate-50 px-5 py-4">
+            <h4 className="font-bold text-slate-900">
+              {dateKey.includes("-") ? formatDateHeading(dateKey) : dateKey}
+            </h4>
+            <p className="mt-1 text-sm text-slate-500">
+              {appointments.length} appointment
+              {appointments.length === 1 ? "" : "s"}
+            </p>
+          </div>
+
+          <div className="divide-y divide-slate-100">
+            {appointments.map((appointment) => {
+              const patientName = getPatientName(appointment);
+
+              return (
+                <button
+                  key={appointment.id}
+                  type="button"
+                  onClick={() => setSelectedBooking(appointment)}
+                  className="grid w-full gap-4 px-5 py-5 text-left transition hover:bg-sky-50/50 md:grid-cols-[90px_1fr_1.2fr_auto] md:items-center"
+                >
+                  <div>
+                    <p className="text-lg font-bold text-slate-900">
+                      {appointment.time}
+                    </p>
+                    <p className="text-xs font-medium text-slate-400">
+                      30 min
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-sky-100 text-xs font-bold text-sky-700">
+                      {getInitials(patientName)}
+                    </div>
+
+                    <div>
+                      <p className="font-bold text-slate-900">{patientName}</p>
+                      <p className="text-sm text-slate-500">Patient</p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="font-semibold text-slate-900">
+                      {appointment.reason || "No reason provided"}
+                    </p>
+                    <p className="text-sm text-slate-500">Reason for visit</p>
+                  </div>
+
+                  <StatusBadge status={appointment.status} />
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ))
+    ) : (
+      <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 px-6 py-14 text-center">
+        <h3 className="font-bold text-slate-900">No scheduled appointments</h3>
+        <p className="mt-2 text-sm text-slate-500">
+          Confirmed and pending appointments will appear here.
+        </p>
+      </div>
+    )}
+  </section>
+)}
+    {/* {scheduleView === "week" && (
       <div className="grid gap-3 md:grid-cols-5">
         {weekDays.map((day) => {
           const dayAppointments = upcomingAppointments.filter(
@@ -584,18 +818,18 @@ const doctorName =
           );
         })}
       </div>
-    )}
+    )} */}
 
-    {scheduleView === "month" && (
+    {/* {scheduleView === "month" && (
       <div className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-100">
         <div className="mb-4 flex items-center justify-between">
           <h4 className="font-bold text-slate-900">May 2026</h4>
           <p className="text-sm text-slate-500">
             {upcomingAppointments.length} appointments
           </p>
-        </div>
+        </div> */}
 
-        <div className="grid grid-cols-7 gap-2 text-center text-xs font-semibold text-slate-400">
+        {/* <div className="grid grid-cols-7 gap-2 text-center text-xs font-semibold text-slate-400">
           {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
             <div key={day}>{day}</div>
           ))}
@@ -634,9 +868,8 @@ const doctorName =
           })}
         </div>
       </div>
-    )}
-  </section>
-)}
+    )} */}
+
 
           </main>
 

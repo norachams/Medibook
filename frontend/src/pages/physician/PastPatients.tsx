@@ -94,9 +94,7 @@ export default function PhysicianPastPatientsPage() {
               <h1 className="text-3xl font-bold tracking-tight text-slate-900">
                 Past patients
               </h1>
-              <p className="mt-2 text-sm text-slate-500">
-                View completed appointments, patient profile details, and session notes.
-              </p>
+             
             </div>
 
             <div className="w-full md:w-80">
