@@ -23,6 +23,19 @@ function buildDateStrip() {
   return days;
 }
 
+function timeToMinutes(time: string) {
+  const [rawTime, period] = time.trim().split(" ");
+  const [rawHour, rawMinute] = rawTime.split(":");
+
+  let hour = Number(rawHour);
+  const minute = Number(rawMinute);
+
+  if (period === "PM" && hour !== 12) hour += 12;
+  if (period === "AM" && hour === 12) hour = 0;
+
+  return hour * 60 + minute;
+}
+
 
 export default function PhysicianPage() {
   const { physicianId } = useParams();
@@ -78,11 +91,21 @@ const existingBookingDetails = locationState?.bookingDetails ?? null;
 
 
         if (data.slots.length > 0) {
-          const firstSlotDate = data.slots[0].date;
-          setSelectedDate(firstSlotDate);
-          // Pre-select the first slot on that date
-          setSelectedSlot(data.slots[0].time);
-          setSelectedSlotId(data.slots[0].id);
+        const sortedSlots = data.slots
+            .slice()
+            .sort((a, b) => {
+            if (a.date !== b.date) {
+                return a.date.localeCompare(b.date);
+            }
+
+            return timeToMinutes(a.time) - timeToMinutes(b.time);
+            });
+
+        const firstSlot = sortedSlots[0];
+
+        setSelectedDate(firstSlot.date);
+        setSelectedSlot(firstSlot.time);
+        setSelectedSlotId(firstSlot.id);
         }
 
         // Chain a second fetch to check for an existing active booking
@@ -98,25 +121,35 @@ const existingBookingDetails = locationState?.bookingDetails ?? null;
       .finally(() => setLoading(false));
   }, [physicianId, token]);
 
-   const slotsForSelectedDate: Slot[] = physician?.slots.filter(
-    (s) => s.date === selectedDate
-  ) ?? [];
+   const slotsForSelectedDate: Slot[] =
+  physician?.slots
+    .filter((s) => s.date === selectedDate)
+    .slice()
+    .sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time)) ?? [];
 
   const datesWithSlots = new Set(physician?.slots.map((s) => s.date) ?? []);
  
   const handleDateSelect = (date: string) => {
-    if (!datesWithSlots.has(date)) return;
-    setSelectedDate(date);
-    // Auto-select first slot of newly selected date
-    const firstSlot = physician?.slots.find((s) => s.date === date);
-    if (firstSlot) {
-      setSelectedSlot(firstSlot.time);
-      setSelectedSlotId(firstSlot.id);
-    } else {
-      setSelectedSlot(null);
-      setSelectedSlotId(null);
-    }
-  };
+  if (!datesWithSlots.has(date)) return;
+
+  setSelectedDate(date);
+
+  const slotsForDate =
+    physician?.slots
+      .filter((s) => s.date === date)
+      .slice()
+      .sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time)) ?? [];
+
+  const firstSlot = slotsForDate[0];
+
+  if (firstSlot) {
+    setSelectedSlot(firstSlot.time);
+    setSelectedSlotId(firstSlot.id);
+  } else {
+    setSelectedSlot(null);
+    setSelectedSlotId(null);
+  }
+};
  
   const isRescheduling = rescheduleBookingId !== null;
   const isBlocked = submitting || !selectedSlot || (!isRescheduling && hasActiveBooking);
