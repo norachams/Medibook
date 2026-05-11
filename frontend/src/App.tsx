@@ -8,6 +8,9 @@ import PhysicianPage from "./pages/patient/PhysicianPage";
 import BookingPage from "./pages/patient/BookingPage";
 import PhysicianDashboard from "./pages/physician/physiciandashboard";
 import PastPatients from "./pages/physician/PastPatients";
+import PatientProfilePage from "./pages/patient/PatientProfilePage";
+import PatientPastAppointmentsPage from "./pages/patient/PatientPastAppointmentsPage";
+
 
 // Redirects from "/" based on auth state and role
 function RootRedirect() {
@@ -31,10 +34,11 @@ export default function App() {
           {/* Patient-only routes */}
           <Route element={<ProtectedRoute requiredRole="patient" />}>
             {/* <Route path="/patient/book" element={<BookingPage />} /> */}
-            <Route path="/patient/dashboard" element={<PatientDashboardPage />} /> {/* ← add this */}
+          <Route path="/patient/dashboard" element={<PatientDashboardPage />} /> {/* ← add this */}
           <Route path="/patient/book" element={<BookingPage />} />
           <Route path="/patient/book/:physicianId" element={<PhysicianPage />} />
-
+          <Route path="/patient/profile" element={<PatientProfilePage />} />
+          <Route path="/patient/past-appointments" element={<PatientPastAppointmentsPage />} />
           </Route>
 
           {/* Physician-only routes */}

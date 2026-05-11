@@ -62,6 +62,20 @@ def init_db():
             FOREIGN KEY (physician_id) REFERENCES physician_profiles (id),
             FOREIGN KEY (slot_id)      REFERENCES appointment_slots (id)
         );
+                         
+        CREATE TABLE IF NOT EXISTS patient_profiles (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL UNIQUE,
+            phone TEXT DEFAULT '',
+            date_of_birth TEXT DEFAULT '',
+            allergies TEXT DEFAULT '',
+            medications TEXT DEFAULT '',
+            medical_conditions TEXT DEFAULT '',
+            medical_notes TEXT DEFAULT '',
+            emergency_contact_name TEXT DEFAULT '',
+            emergency_contact_phone TEXT DEFAULT '',
+            FOREIGN KEY (user_id) REFERENCES users(id)
+);
     """)
  
 

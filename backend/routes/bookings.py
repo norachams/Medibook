@@ -128,6 +128,74 @@ def get_my_bookings():
         for r in rows
     ]), 200
 
+
+# ---------------------------------------------------------------------------
+# GET /api/bookings/past
+# Patient sees completed appointments and physician notes
+# ---------------------------------------------------------------------------
+@bookings_bp.route("/past", methods=["GET"])
+@jwt_required()
+def get_past_bookings():
+    patient_id = int(get_jwt_identity())
+    claims = get_jwt()
+
+    if claims.get("role") != "patient":
+        return jsonify({"error": "Only patients can view past appointments."}), 403
+
+    conn = get_db()
+
+    rows = conn.execute(
+        """
+        SELECT
+            b.id,
+            b.status,
+            b.reason,
+            b.patient_name,
+            b.patient_email,
+            b.patient_phone,
+            b.created_at,
+            b.physician_notes,
+            b.completed_at,
+            u.full_name AS physician_name,
+            pp.id AS physician_id,
+            pp.specialty,
+            s.display_date,
+            s.date,
+            s.time
+        FROM bookings b
+        JOIN physician_profiles pp ON pp.id = b.physician_id
+        JOIN users u ON u.id = pp.user_id
+        JOIN appointment_slots s ON s.id = b.slot_id
+        WHERE b.patient_id = ?
+          AND b.status = 'completed'
+        ORDER BY s.date DESC, s.time DESC
+        """,
+        (patient_id,),
+    ).fetchall()
+
+    conn.close()
+
+    return jsonify([
+        {
+            "id": r["id"],
+            "status": r["status"],
+            "reason": r["reason"],
+            "patient_name": r["patient_name"],
+            "patient_email": r["patient_email"],
+            "patient_phone": r["patient_phone"],
+            "created_at": r["created_at"],
+            "physician_notes": r["physician_notes"] or "",
+            "completed_at": r["completed_at"] or "",
+            "physician_name": r["physician_name"],
+            "physician_id": r["physician_id"],
+            "specialty": r["specialty"],
+            "display_date": r["display_date"],
+            "date": r["date"],
+            "time": r["time"],
+        }
+        for r in rows
+    ]), 200
+
 # ---------------------------------------------------------------------------
 # GET /api/bookings
 # Physician sees bookings for their own profile
@@ -223,7 +291,7 @@ def update_booking_status(booking_id):
     data = request.get_json(silent=True)
     new_status = data.get("status") if data else None
 
-    if new_status not in ["pending", "confirmed", "cancelled"]:
+    if new_status not in ["pending", "confirmed", "cancelled", "completed"]:
         return jsonify({"error": "Invalid status."}), 422
 
     conn = get_db()
