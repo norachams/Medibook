@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState,useRef } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import PatientDetailDrawer from "../../components/PatientDetailDrawer";
+import { AnimatePresence } from "framer-motion";
 
 type BookingStatus = "pending" | "confirmed" | "cancelled"| "completed";
 
@@ -735,15 +736,17 @@ const sortedTodayAppointments = useMemo(() => {
           )}
         </div>
       </div>
-        {selectedBooking && (
+       <AnimatePresence>
+      {selectedBooking && (
         <PatientDetailDrawer
-        booking={normalizeBookingForDrawer(selectedBooking)}
-        token={token}
-        onClose={() => setSelectedBooking(null)}
-        onCompleted={handleBookingCompleted}
-        onStatusChange={updateBookingStatus}
-      />
+          booking={normalizeBookingForDrawer(selectedBooking)}
+          token={token}
+          onClose={() => setSelectedBooking(null)}
+          onCompleted={handleBookingCompleted}
+          onStatusChange={updateBookingStatus}
+        />
       )}
+    </AnimatePresence>
     </div>
   );
 }

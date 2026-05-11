@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { ChevronsRight, Maximize2, Minimize2 } from "lucide-react";
+import { motion } from "framer-motion";
 
 interface Booking {
   id: number;
@@ -160,7 +161,13 @@ const handleDecline = async () => {
   const patient = details?.patient;
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/30">
+  <motion.div
+    className="fixed inset-0 z-50 flex justify-end bg-black/30"
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    exit={{ opacity: 0 }}
+    transition={{ duration: 0.2 }}
+  >
 
               <button
             type="button"
@@ -169,9 +176,13 @@ const handleDecline = async () => {
             className="flex-1"
           />
 
-         <aside
+ <motion.aside
+  initial={{ x: "100%" }}
+  animate={{ x: 0 }}
+  exit={{ x: "100%" }}
+  transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
   className={[
-    "relative h-full overflow-y-auto bg-white shadow-2xl transition-all duration-300",
+    "relative h-full overflow-y-auto bg-white shadow-2xl",
     expanded ? "w-full" : "w-full max-w-4xl",
   ].join(" ")}
 >
@@ -383,10 +394,10 @@ const handleDecline = async () => {
                    </div>
         )}
       </div>
-    </aside>
+       </motion.aside>
    
-  </div>
-  );
+  </motion.div>
+);
 }
 
 function InfoBlock({ label, value }: { label: string; value: string }) {
