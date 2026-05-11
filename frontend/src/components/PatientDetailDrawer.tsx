@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ChevronsRight, Maximize2, Minimize2 } from "lucide-react";
 
 interface Booking {
   id: number;
@@ -160,61 +161,66 @@ const handleDecline = async () => {
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/30">
-      <button
-        type="button"
-        aria-label="Close drawer"
-        onClick={onClose}
-        className="flex-1"
-      />
 
-      <aside className={[
-            "h-full w-full overflow-y-auto bg-white p-6 shadow-2xl transition-all duration-300",
-            expanded ? "max-w-none" : "max-w-xl",
-          ].join(" ")}
-        >
-        <div className="mb-6 flex items-start justify-between gap-4">
-          <div>
-            <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-sky-500">
-              Patient details
-            </p>
-            <h2 className="text-2xl font-bold text-gray-900">
-              {booking.patient_name}
-            </h2>
-            {/* <p className="mt-1 text-sm text-gray-500">
-              {booking.display_date} at {booking.time}
-            </p> */}
-          </div>
-
-                  <div className="flex items-center gap-2">
-          <button
+              <button
             type="button"
-            onClick={() => setExpanded((prev) => !prev)}
-            className="rounded-full border border-gray-200 px-3 py-1 text-sm text-gray-500 transition hover:bg-gray-50"
-          >
-            {expanded ? "Collapse" : "Expand"}
-          </button>
-
-          <button
-            type="button"
+            aria-label="Close drawer"
             onClick={onClose}
-            className="rounded-full border border-gray-200 px-3 py-1 text-sm text-gray-500 transition hover:bg-gray-50"
-          >
-            Close
-          </button>
-</div>
-        </div>
+            className="flex-1"
+          />
 
-        {loading && (
-          <div className="rounded-2xl bg-sky-50 px-5 py-8 text-center text-sm text-gray-400">
-            Loading patient details…
-          </div>
-        )}
+         <aside
+  className={[
+    "relative h-full overflow-y-auto bg-white shadow-2xl transition-all duration-300",
+    expanded ? "w-full" : "w-full max-w-4xl",
+  ].join(" ")}
+>
+  {/* Icons stay at the very top-left */}
+  <div className="absolute left-2 top-2 z-10 flex items-center gap-1">
+    <button
+      type="button"
+      title="Close"
+      aria-label="Close patient details"
+      onClick={onClose}
+      className="flex h-9 w-9 items-center justify-center rounded-md text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
+    >
+      <ChevronsRight size={24} />
+    </button>
 
-        {error && (
-          <div className="mb-5 rounded-2xl border border-red-100 bg-red-50 px-5 py-4 text-sm text-red-600">
-            {error}
-          </div>
-        )}
+    <button
+      type="button"
+      title={expanded ? "Exit expanded view" : "Expand"}
+      aria-label={expanded ? "Exit expanded view" : "Expand patient details"}
+      onClick={() => setExpanded((prev) => !prev)}
+      className="flex h-9 w-9 items-center justify-center rounded-md text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
+    >
+      {expanded ? <Minimize2 size={21} /> : <Maximize2 size={21} />}
+    </button>
+  </div>
+
+  {/* Everything else gets normal spacing */}
+<div className="px-14 pb-10 pt-16">
+      <div className="mb-12">
+      <p className="mb-3 text-xs font-semibold uppercase tracking-[0.35em] text-sky-500">
+        Patient details
+      </p>
+
+      <h2 className="text-4xl font-bold tracking-tight text-gray-900">
+        {booking.patient_name}
+      </h2>
+    </div>
+
+    {loading && (
+      <div className="rounded-2xl bg-sky-50 px-5 py-8 text-center text-sm text-gray-400">
+        Loading patient details…
+      </div>
+    )}
+
+    {error && (
+      <div className="mb-5 rounded-2xl border border-red-100 bg-red-50 px-5 py-4 text-sm text-red-600">
+        {error}
+      </div>
+    )}
 
         {!loading && patient && (
           <div className="space-y-6">
@@ -401,10 +407,12 @@ const handleDecline = async () => {
     </>
   )}
 </section>
-          </div>
+                   </div>
         )}
-      </aside>
-    </div>
+      </div>
+    </aside>
+   
+  </div>
   );
 }
 
