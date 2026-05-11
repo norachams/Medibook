@@ -5,7 +5,7 @@ import CancelAppointmentModal from "../../components/CancelAppointmentModal";
  
 interface Booking {
   id: number;
-  status: "pending" | "confirmed" | "cancelled";
+  status: "pending" | "confirmed" | "cancelled" | "completed";
   reason: string;
   created_at: string;
   patient_name: string;
@@ -22,6 +22,8 @@ const STATUS_STYLES: Record<Booking["status"], { pill: string; dot: string }> = 
   pending:   { pill: "bg-amber-50 text-amber-700",   dot: "bg-amber-400" },
   confirmed: { pill: "bg-emerald-50 text-emerald-700", dot: "bg-emerald-400" },
   cancelled: { pill: "bg-gray-100 text-gray-400",    dot: "bg-gray-300" },
+  completed: { pill: "bg-slate-100 text-slate-500", dot: "bg-slate-300" },
+
 };
  
 

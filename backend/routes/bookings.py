@@ -104,6 +104,7 @@ def get_my_bookings():
         JOIN appointment_slots s   ON s.id  = b.slot_id
         WHERE b.patient_id = ?
         AND b.status != 'cancelled'
+        AND b.status != 'completed'
         ORDER BY b.created_at DESC
         """,
         (patient_id,),
@@ -247,6 +248,8 @@ def get_physician_bookings():
         JOIN users u ON u.id = pp.user_id
         JOIN appointment_slots s ON s.id = b.slot_id
         WHERE b.physician_id = ?
+        AND b.status != 'cancelled'
+        AND b.status != 'completed'
         ORDER BY s.date ASC, s.time ASC
         """,
         (physician["id"],),
@@ -272,6 +275,212 @@ def get_physician_bookings():
         }
         for r in rows
     ]), 200
+
+
+# ---------------------------------------------------------------------------
+# GET /api/bookings/<id>/patient-detail
+# Physician views patient profile + past visits for a specific appointment
+# ---------------------------------------------------------------------------
+@bookings_bp.route("/<int:booking_id>/patient-detail", methods=["GET"])
+@jwt_required()
+def get_patient_detail_for_booking(booking_id):
+    user_id = int(get_jwt_identity())
+    claims = get_jwt()
+
+    if claims.get("role") != "physician":
+        return jsonify({"error": "Only physicians can view patient details."}), 403
+
+    conn = get_db()
+
+    physician = conn.execute(
+        """
+        SELECT id
+        FROM physician_profiles
+        WHERE user_id = ?
+        """,
+        (user_id,),
+    ).fetchone()
+
+    if not physician:
+        conn.close()
+        return jsonify({"error": "Physician profile not found."}), 404
+
+    booking = conn.execute(
+        """
+        SELECT
+            b.id,
+            b.patient_id,
+            b.patient_name,
+            b.patient_email,
+            b.patient_phone,
+            b.reason,
+            b.status,
+            b.physician_notes,
+            s.display_date,
+            s.date,
+            s.time
+        FROM bookings b
+        JOIN appointment_slots s ON s.id = b.slot_id
+        WHERE b.id = ?
+          AND b.physician_id = ?
+        """,
+        (booking_id, physician["id"]),
+    ).fetchone()
+
+    if not booking:
+        conn.close()
+        return jsonify({"error": "Booking not found."}), 404
+
+    patient_user = conn.execute(
+        """
+        SELECT full_name, email
+        FROM users
+        WHERE id = ?
+        """,
+        (booking["patient_id"],),
+    ).fetchone()
+
+    profile = conn.execute(
+        """
+        SELECT
+            phone,
+            date_of_birth,
+            allergies,
+            medications,
+            medical_conditions,
+            medical_notes,
+            emergency_contact_name,
+            emergency_contact_phone
+        FROM patient_profiles
+        WHERE user_id = ?
+        """,
+        (booking["patient_id"],),
+    ).fetchone()
+
+    past_visits = conn.execute(
+        """
+        SELECT
+            b.id,
+            b.reason,
+            b.physician_notes,
+            b.completed_at,
+            s.display_date,
+            s.date,
+            s.time
+        FROM bookings b
+        JOIN appointment_slots s ON s.id = b.slot_id
+        WHERE b.patient_id = ?
+          AND b.physician_id = ?
+          AND b.status = 'completed'
+          AND b.id != ?
+        ORDER BY s.date DESC, s.time DESC
+        """,
+        (booking["patient_id"], physician["id"], booking_id),
+    ).fetchall()
+
+    conn.close()
+
+    return jsonify({
+        "current_booking": {
+            "id": booking["id"],
+            "status": booking["status"],
+            "reason": booking["reason"],
+            "display_date": booking["display_date"],
+            "date": booking["date"],
+            "time": booking["time"],
+            "physician_notes": booking["physician_notes"] or "",
+        },
+        "patient": {
+            "full_name": patient_user["full_name"] if patient_user else booking["patient_name"],
+            "email": patient_user["email"] if patient_user else booking["patient_email"],
+            "phone": profile["phone"] if profile else booking["patient_phone"],
+            "date_of_birth": profile["date_of_birth"] if profile else "",
+            "allergies": profile["allergies"] if profile else "",
+            "medications": profile["medications"] if profile else "",
+            "medical_conditions": profile["medical_conditions"] if profile else "",
+            "medical_notes": profile["medical_notes"] if profile else "",
+            "emergency_contact_name": profile["emergency_contact_name"] if profile else "",
+            "emergency_contact_phone": profile["emergency_contact_phone"] if profile else "",
+        },
+        "past_visits": [
+            {
+                "id": r["id"],
+                "reason": r["reason"],
+                "physician_notes": r["physician_notes"] or "",
+                "completed_at": r["completed_at"] or "",
+                "display_date": r["display_date"],
+                "date": r["date"],
+                "time": r["time"],
+            }
+            for r in past_visits
+        ],
+    }), 200
+
+
+# ---------------------------------------------------------------------------
+# PATCH /api/bookings/<id>/complete
+# Physician adds notes and marks the appointment as completed
+# ---------------------------------------------------------------------------
+@bookings_bp.route("/<int:booking_id>/complete", methods=["PATCH"])
+@jwt_required()
+def complete_booking(booking_id):
+    user_id = int(get_jwt_identity())
+    claims = get_jwt()
+
+    if claims.get("role") != "physician":
+        return jsonify({"error": "Only physicians can complete appointments."}), 403
+
+    data = request.get_json(silent=True) or {}
+    physician_notes = (data.get("physician_notes") or "").strip()
+
+    conn = get_db()
+
+    physician = conn.execute(
+        """
+        SELECT id
+        FROM physician_profiles
+        WHERE user_id = ?
+        """,
+        (user_id,),
+    ).fetchone()
+
+    if not physician:
+        conn.close()
+        return jsonify({"error": "Physician profile not found."}), 404
+
+    booking = conn.execute(
+        """
+        SELECT *
+        FROM bookings
+        WHERE id = ?
+          AND physician_id = ?
+        """,
+        (booking_id, physician["id"]),
+    ).fetchone()
+
+    if not booking:
+        conn.close()
+        return jsonify({"error": "Booking not found."}), 404
+
+    if booking["status"] == "cancelled":
+        conn.close()
+        return jsonify({"error": "Cannot complete a cancelled appointment."}), 409
+
+    conn.execute(
+        """
+        UPDATE bookings
+        SET status = 'completed',
+            physician_notes = ?,
+            completed_at = ?
+        WHERE id = ?
+        """,
+        (physician_notes, datetime.utcnow().isoformat(), booking_id),
+    )
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({"message": "Appointment marked as completed."}), 200
 
 
 # ---------------------------------------------------------------------------

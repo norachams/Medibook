@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState,useRef } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
+import PatientDetailDrawer from "../../components/PatientDetailDrawer";
 
-type BookingStatus = "pending" | "confirmed" | "cancelled";
+type BookingStatus = "pending" | "confirmed" | "cancelled"| "completed";
 
 interface Booking {
   id: number;
@@ -36,6 +37,7 @@ const STATUS_STYLES: Record<BookingStatus, string> = {
   pending: "bg-amber-50 text-amber-700 border-amber-100",
   confirmed: "bg-emerald-50 text-emerald-700 border-emerald-100",
   cancelled: "bg-red-50 text-red-600 border-red-100",
+  completed: "bg-slate-100 text-slate-600 border-slate-200",
 };
 
 function getPatientName(booking: Booking) {
@@ -48,6 +50,20 @@ function getDisplayDate(booking: Booking) {
 
 function getCreatedAt(booking: Booking) {
   return booking.created_at ?? booking.createdAt ?? "";
+}
+
+function normalizeBookingForDrawer(booking: Booking) {
+  return {
+    id: booking.id,
+    status: booking.status,
+    reason: booking.reason,
+    patient_name: booking.patient_name ?? booking.patientName ?? "Patient",
+    patient_email: booking.patient_email ?? booking.patientEmail ?? "",
+    patient_phone: booking.patient_phone ?? booking.patientPhone ?? "",
+    display_date: booking.display_date ?? booking.displayDate ?? booking.date ?? "Upcoming",
+    date: booking.date ?? "",
+    time: booking.time,
+  };
 }
 
 function getInitials(name: string) {
@@ -141,6 +157,7 @@ const doctorName =
   const [scheduleView, setScheduleView] = useState<"day" | "week" | "month">("week");
   const [error, setError] = useState("");
   const [profileOpen, setProfileOpen] = useState(false);
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -221,6 +238,14 @@ const doctorName =
       setError(err instanceof Error ? err.message : "Something went wrong.");
     }
   }
+
+  function handleBookingCompleted(bookingId: number) {
+  setBookings((current) =>
+    current.filter((booking) => booking.id !== bookingId)
+  );
+
+  setSelectedBooking(null);
+}
 
   
   useEffect(() => {
@@ -413,7 +438,8 @@ const doctorName =
             return (
               <div
                 key={appointment.id}
-                className={`grid gap-4 px-5 py-5 md:grid-cols-[56px_1.1fr_0.7fr_1fr_auto] md:items-center ${
+                onClick={() => setSelectedBooking(appointment)}
+                className={`grid cursor-pointer gap-4 px-5 py-5 transition hover:bg-sky-50/50 md:grid-cols-[56px_1.1fr_0.7fr_1fr_auto] md:items-center ${
                   index !== appointments.length - 1
                     ? "border-b border-slate-100"
                     : ""
@@ -474,9 +500,10 @@ const doctorName =
             {upcomingAppointments.length > 0 ? (
               upcomingAppointments.map((appointment) => (
                 <div
-                  key={appointment.id}
-                  className="flex items-center justify-between gap-4 rounded-2xl border border-slate-100 bg-sky-50 px-5 py-4"
-                >
+                    key={appointment.id}
+                    onClick={() => setSelectedBooking(appointment)}
+                    className="cursor-pointer rounded-2xl bg-white p-3 shadow-sm ring-1 ring-sky-100 transition hover:bg-sky-50"
+                  >
                   <div>
                     <p className="font-bold text-slate-900">
                       {appointment.time} · {getPatientName(appointment)}
@@ -534,9 +561,10 @@ const doctorName =
                 {dayAppointments.length > 0 ? (
                   dayAppointments.map((appointment) => (
                     <div
-                      key={appointment.id}
-                      className="rounded-2xl bg-white p-3 shadow-sm ring-1 ring-sky-100"
-                    >
+                          key={appointment.id}
+                          onClick={() => setSelectedBooking(appointment)}
+                          className="flex cursor-pointer items-center justify-between gap-4 rounded-2xl border border-slate-100 bg-sky-50 px-5 py-4 transition hover:bg-sky-100"
+                        >
                       <p className="text-sm font-bold text-slate-900">
                         {appointment.time}
                       </p>
@@ -643,9 +671,10 @@ const doctorName =
                     const patientName = getPatientName(request);
 
                     return (
-                      <div
+                     <div
                         key={request.id}
-                        className="rounded-3xl border border-slate-100 p-5"
+                        onClick={() => setSelectedBooking(request)}
+                        className="cursor-pointer rounded-3xl border border-slate-100 p-5 transition hover:bg-sky-50/50"
                       >
                         <div className="mb-4 flex items-center gap-3">
                           <div className="flex h-11 w-11 items-center justify-center rounded-full bg-sky-50 text-sm font-bold text-sky-700">
@@ -680,18 +709,20 @@ const doctorName =
 
                         <div className="mt-5 grid grid-cols-2 gap-3">
                           <button
-                            onClick={() =>
-                              updateBookingStatus(request.id, "confirmed")
-                            }
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              updateBookingStatus(request.id, "confirmed");
+                            }}
                             className="rounded-xl bg-sky-500 px-4 py-3 text-sm font-bold text-white hover:bg-sky-600"
                           >
                             Accept
                           </button>
 
                           <button
-                            onClick={() =>
-                              updateBookingStatus(request.id, "cancelled")
-                            }
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              updateBookingStatus(request.id, "cancelled");
+                            }}
                             className="rounded-xl border border-red-200 px-4 py-3 text-sm font-bold text-red-500 hover:bg-red-50"
                           >
                             Decline
@@ -713,6 +744,15 @@ const doctorName =
           )}
         </div>
       </div>
+        {selectedBooking && (
+        <PatientDetailDrawer
+        booking={normalizeBookingForDrawer(selectedBooking)}
+        token={token}
+        onClose={() => setSelectedBooking(null)}
+        onCompleted={handleBookingCompleted}
+        onStatusChange={updateBookingStatus}
+      />
+      )}
     </div>
   );
 }
