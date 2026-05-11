@@ -175,7 +175,6 @@ const handleDecline = async () => {
     expanded ? "w-full" : "w-full max-w-4xl",
   ].join(" ")}
 >
-  {/* Icons stay at the very top-left */}
   <div className="absolute left-2 top-2 z-10 flex items-center gap-1">
     <button
       type="button"
@@ -200,15 +199,6 @@ const handleDecline = async () => {
 
   {/* Everything else gets normal spacing */}
 <div className="px-14 pb-10 pt-16">
-      <div className="mb-12">
-      <p className="mb-3 text-xs font-semibold uppercase tracking-[0.35em] text-sky-500">
-        Patient details
-      </p>
-
-      <h2 className="text-4xl font-bold tracking-tight text-gray-900">
-        {booking.patient_name}
-      </h2>
-    </div>
 
     {loading && (
       <div className="rounded-2xl bg-sky-50 px-5 py-8 text-center text-sm text-gray-400">
@@ -224,96 +214,79 @@ const handleDecline = async () => {
 
         {!loading && patient && (
           <div className="space-y-6">
-            <section className="rounded-3xl border border-sky-100 bg-sky-50/70 p-5">
-  <h3 className="mb-4 text-lg font-bold text-gray-900">
-    Appointment details
-  </h3>
-
-  <div className="grid gap-4 md:grid-cols-2">
+           <section className="rounded-3xl border border-sky-100 bg-sky-50/70 p-6">
+  <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
     <div>
-      <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">
-        Appointment time
-      </p>
-      <p className="font-medium text-gray-800">
+      <div className="mb-3 flex flex-wrap items-center gap-3">
+        <h2 className="text-3xl font-bold tracking-tight text-gray-900">
+          {patient.full_name || booking.patient_name}
+        </h2>
+
+        <span
+          className={[
+            "rounded-full px-3 py-1 text-xs font-semibold capitalize",
+            booking.status === "confirmed"
+              ? "bg-emerald-50 text-emerald-700"
+              : booking.status === "pending"
+              ? "bg-amber-50 text-amber-700"
+              : booking.status === "cancelled"
+              ? "bg-gray-100 text-gray-500"
+              : "bg-sky-50 text-sky-700",
+          ].join(" ")}
+        >
+          {booking.status}
+        </span>
+      </div>
+
+      <p className="text-base font-medium text-gray-800">
         {booking.display_date} at {booking.time}
       </p>
-    </div>
 
-    <div>
-      <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">
-        Status
-      </p>
-      <p className="font-medium capitalize text-gray-800">
-        {booking.status}
-      </p>
-    </div>
+      <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm text-gray-500">
+        <p>
+          <span className="font-semibold text-gray-700">Email:</span>{" "}
+          {patient.email || booking.patient_email || "Not provided"}
+        </p>
 
-    <div className="md:col-span-2">
-      <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">
-        Reason for visit
-      </p>
-      <p className="font-medium text-gray-800">
-        {booking.reason || "No reason provided."}
-      </p>
+        <p>
+          <span className="font-semibold text-gray-700">Phone:</span>{" "}
+          {patient.phone || booking.patient_phone || "Not provided"}
+        </p>
+
+        <p>
+          <span className="font-semibold text-gray-700">DOB:</span>{" "}
+          {patient.date_of_birth || "Not provided"}
+        </p>
+      </div>
     </div>
   </div>
+
+  <div className="mt-6 rounded-2xl bg-white/80 px-5 py-4 shadow-sm ring-1 ring-sky-100">
+    <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-sky-500">
+      Reason for visit
+    </p>
+    <p className="text-base leading-7 text-gray-800">
+      {booking.reason || "No reason provided."}
+    </p>
+  </div>
 </section>
-            <section className="rounded-3xl border border-gray-100 bg-sky-50/70 p-5">
-              <h3 className="mb-4 text-lg font-bold text-gray-900">
-                Patient profile
-              </h3>
 
-              <div className="grid gap-3 text-sm md:grid-cols-2">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">
-                    Name
-                  </p>
-                  <p className="font-medium text-gray-800">{patient.full_name}</p>
-                </div>
+            <section className="rounded-3xl border border-gray-100 bg-white p-6 shadow-sm">
+            <h3 className="mb-5 text-xl font-bold text-gray-900">
+              Medical history
+            </h3>
 
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">
-                    Email
-                  </p>
-                  <p className="font-medium text-gray-800">{patient.email}</p>
-                </div>
-
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">
-                    Phone
-                  </p>
-                  <p className="font-medium text-gray-800">
-                    {patient.phone || booking.patient_phone || "Not provided"}
-                  </p>
-                </div>
-
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">
-                    Date of birth
-                  </p>
-                  <p className="font-medium text-gray-800">
-                    {patient.date_of_birth || "Not provided"}
-                  </p>
-                </div>
-              </div>
-            </section>
+            <div className="grid gap-4 md:grid-cols-2">
+              <InfoBlock label="Allergies" value={patient.allergies} />
+              <InfoBlock label="Current medications" value={patient.medications} />
+              <InfoBlock label="Medical conditions" value={patient.medical_conditions} />
+              <InfoBlock label="Additional notes" value={patient.medical_notes} />
+            </div>
+          </section>
 
             <section className="rounded-3xl border border-gray-100 bg-white p-5 shadow-sm">
               <h3 className="mb-4 text-lg font-bold text-gray-900">
-                Medical history
-              </h3>
-
-              <div className="space-y-4 text-sm">
-                <InfoBlock label="Allergies" value={patient.allergies} />
-                <InfoBlock label="Current medications" value={patient.medications} />
-                <InfoBlock label="Medical conditions" value={patient.medical_conditions} />
-                <InfoBlock label="Additional notes" value={patient.medical_notes} />
-              </div>
-            </section>
-
-            <section className="rounded-3xl border border-gray-100 bg-white p-5 shadow-sm">
-              <h3 className="mb-4 text-lg font-bold text-gray-900">
-                Past visits with you
+                Past visits 
               </h3>
 
               {details.past_visits.length === 0 ? (
@@ -350,7 +323,7 @@ const handleDecline = async () => {
       </h3>
 
       <p className="mb-4 text-sm text-gray-500">
-        Accept this appointment request to add it to your confirmed schedule, or decline it to free the time slot.
+          Review the request before adding it to your schedule.
       </p>
 
       <div className="grid gap-3 sm:grid-cols-2">
@@ -418,11 +391,14 @@ const handleDecline = async () => {
 
 function InfoBlock({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl bg-gray-50 px-4 py-3">
-      <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-gray-400">
+    <div className="rounded-2xl bg-gray-50 px-5 py-4">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-gray-400">
         {label}
       </p>
-      <p className="text-gray-700">{value || "Not provided"}</p>
+      <p className="text-sm leading-6 text-gray-700">
+        {value || "Not provided"}
+      </p>
     </div>
+
   );
 }
