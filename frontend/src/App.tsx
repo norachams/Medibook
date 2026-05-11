@@ -6,9 +6,7 @@ import LoginPage from "./pages/LoginPage";
 import PatientDashboardPage from "./pages/patient/PatientDashboardPage";
 import PhysicianPage from "./pages/patient/PhysicianPage";
 import BookingPage from "./pages/patient/BookingPage";
-
-// Placeholder pages — will be built in later steps
-const DashboardPage   = () => <div className="p-8 text-lg">Physician dashboard</div>;
+import PhysicianDashboard from "./pages/physician/physiciandashboard";
 
 // Redirects from "/" based on auth state and role
 function RootRedirect() {
@@ -40,7 +38,7 @@ export default function App() {
 
           {/* Physician-only routes */}
           <Route element={<ProtectedRoute requiredRole="physician" />}>
-            <Route path="/physician/dashboard" element={<DashboardPage />} />
+            <Route path="/physician/dashboard" element={<PhysicianDashboard />} />
           </Route>
 
 

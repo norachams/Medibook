@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import type { Physician,Slot } from "../../types/physician";
 import { useAuth } from "../../context/AuthContext";
 
@@ -14,10 +14,10 @@ function buildDateStrip() {
     const d = new Date();
     d.setDate(d.getDate() + i);
     days.push({
-      date:  d.toISOString().split("T")[0],                          // "2026-05-14"
-      label: d.toLocaleDateString("en-US", { weekday: "short" }),    // "Wed"
-      day:   d.toLocaleDateString("en-US", { day: "numeric" }),      // "14"
-      month: d.toLocaleDateString("en-US", { month: "short" }),      // "May"
+      date:  d.toISOString().split("T")[0],                          
+      label: d.toLocaleDateString("en-US", { weekday: "short" }),    
+      day:   d.toLocaleDateString("en-US", { day: "numeric" }),      
+      month: d.toLocaleDateString("en-US", { month: "short" }),      
     });
   }
   return days;
@@ -28,23 +28,40 @@ export default function PhysicianPage() {
   const { physicianId } = useParams();
   const navigate = useNavigate();
   const { token }       = useAuth();
+  const location        = useLocation();
+
+  // If coming from dashboard via "Reschedule", location.state carries the booking id
+  const locationState = location.state as {
+  rescheduleBookingId?: number;
+  bookingDetails?: {
+    patient_name: string;
+    patient_email: string;
+    patient_phone: string;
+    reason: string;
+  };
+} | null;
+
+const rescheduleBookingId: number | null =
+  locationState?.rescheduleBookingId ?? null;
+
+const existingBookingDetails = locationState?.bookingDetails ?? null;
+
 
   const [physician, setPhysician]   = useState<Physician | null>(null);
   const [loading, setLoading]       = useState(true);
   const [error, setError]           = useState<string | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [selectedSlotId, setSelectedSlotId] = useState<number | null>(null);
-  const [selectedDate, setSelectedDate]         = useState<string | null>(null); // NEW: selected day in strip
+  const [selectedDate, setSelectedDate]         = useState<string | null>(null); 
   const [hasActiveBooking, setHasActiveBooking] = useState(false);
-  const [fullName, setFullName]   = useState("");
-  const [email, setEmail]         = useState("");
-  const [phone, setPhone]         = useState("");
-  const [reason, setReason]       = useState("");
+  const [fullName, setFullName] = useState(existingBookingDetails?.patient_name ?? "");
+  const [email, setEmail] = useState(existingBookingDetails?.patient_email ?? "");
+  const [phone, setPhone] = useState(existingBookingDetails?.patient_phone ?? "");
+  const [reason, setReason] = useState(existingBookingDetails?.reason ?? "");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
-
-    const dateStrip = buildDateStrip();
+  const dateStrip = buildDateStrip();
 
   
 
@@ -60,7 +77,6 @@ export default function PhysicianPage() {
         setPhysician(data);
 
 
-        // Pre-select first available slot (both display time and id)
         if (data.slots.length > 0) {
           const firstSlotDate = data.slots[0].date;
           setSelectedDate(firstSlotDate);
@@ -102,7 +118,8 @@ export default function PhysicianPage() {
     }
   };
  
-  const isBlocked = submitting || !selectedSlot || hasActiveBooking;
+  const isRescheduling = rescheduleBookingId !== null;
+  const isBlocked = submitting || !selectedSlot || (!isRescheduling && hasActiveBooking);
 
   // ── Submit — real POST to /api/bookings ──────────────────────────────────
   const handleSubmit = async (e: React.FormEvent) => {
@@ -110,30 +127,37 @@ export default function PhysicianPage() {
     if (!selectedSlotId || !physician) return;
     setSubmitError(null);
     setSubmitting(true);
- 
     try {
-      const res = await fetch("http://localhost:8000/api/bookings/", {
-        method: "POST",
+      // If rescheduling, PATCH the existing booking instead of creating a new one
+      const url = rescheduleBookingId
+        ? `http://localhost:8000/api/bookings/${rescheduleBookingId}/reschedule`
+        : "http://localhost:8000/api/bookings/";
+      const method = rescheduleBookingId ? "PATCH" : "POST";
+ 
+      const res = await fetch(url, {
+        method,
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`, // send JWT so Flask knows who's booking
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          physician_id:  physician.id,
-          slot_id:       selectedSlotId,   // ID of the slot, not just the time string
-          patient_name:  fullName,
-          patient_email: email,
-          patient_phone: phone,
-          reason,
-        }),
+        body: JSON.stringify(
+          rescheduleBookingId
+            ? { slot_id: selectedSlotId }  // reschedule only needs the new slot
+            : {
+                physician_id:  physician.id,
+                slot_id:       selectedSlotId,
+                patient_name:  fullName,
+                patient_email: email,
+                patient_phone: phone,
+                reason,
+              }
+        ),
       });
- 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Something went wrong.");
       setSubmitted(true);
     } catch (err: unknown) {
-      const e = err as Error;
-      setSubmitError(e.message);
+      setSubmitError((err as Error).message);
     } finally {
       setSubmitting(false);
     }
@@ -200,11 +224,13 @@ export default function PhysicianPage() {
       <div className="mx-auto max-w-6xl">
 
         <button
-          onClick={() => navigate("/patient/book")}
-          className="mb-8 flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 shadow-sm transition hover:bg-gray-50"
-        >
-          ← Back to physicians
-        </button>
+            onClick={() =>
+                navigate(isRescheduling ? "/patient/dashboard" : "/patient/book")
+            }
+            className="mb-8 flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 shadow-sm transition hover:bg-gray-50"
+            >
+            {isRescheduling ? "← Back to dashboard" : "← Back to physicians"}
+            </button>
 
         <div className="flex flex-col gap-6 lg:flex-row">
 
@@ -238,13 +264,10 @@ export default function PhysicianPage() {
             </div>
 
 
-
-            {/* NEW: date strip + slot picker in one card */}
             <div className="rounded-3xl border border-gray-100 bg-white p-8 shadow-lg shadow-gray-100/60">
               <h2 className="mb-1 text-xl font-bold text-gray-900">Available appointment times</h2>
               <p className="mb-5 text-sm text-gray-400">Select a day, then choose a time.</p>
  
-              {/* NEW: 7-day date strip */}
               <div className="mb-6 grid grid-cols-7 gap-2">
                 {dateStrip.map(({ date, label, day, month }) => {
                   const hasSlots   = datesWithSlots.has(date);               
@@ -274,7 +297,6 @@ export default function PhysicianPage() {
                 })}
               </div>
  
-              {/* NEW: time slots filtered to selected date */}
               {slotsForSelectedDate.length === 0 ? (
                 <p className="text-sm text-gray-400">No available slots for this day.</p>
               ) : (
@@ -284,14 +306,14 @@ export default function PhysicianPage() {
                       key={slot.id}
                       type="button"
                       onClick={() => {
-                        if (!hasActiveBooking) {
+                    if (!hasActiveBooking || isRescheduling) {
                           setSelectedSlot(slot.time);
                           setSelectedSlotId(slot.id);
                         }
                       }}
                       className={[
                         "rounded-xl px-5 py-2.5 text-sm font-semibold transition",
-                        hasActiveBooking
+                        hasActiveBooking && !isRescheduling
                           ? "cursor-not-allowed border border-gray-100 bg-gray-50 text-gray-300"  // blocked
                           : selectedSlot === slot.time
                           ? "bg-sky-500 text-white shadow-md shadow-sky-200"                      // selected
@@ -309,20 +331,25 @@ export default function PhysicianPage() {
           {/* ── Right: booking form ── */}
           <div className="w-full lg:w-96">
             <div className="sticky top-8 rounded-3xl border border-gray-100 bg-white p-8 shadow-lg shadow-gray-100/60">
-              <h2 className="mb-1 text-xl font-bold text-gray-900">Request appointment</h2>
-              <p className="mb-6 text-sm text-gray-400">
-                Submit your details and the request will start as pending.
-              </p>
+              <h2 className="mb-1 text-xl font-bold text-gray-900">
+                    {isRescheduling ? "Request a new appointment" : "Request appointment"}
+                    </h2>
+
+                    <p className="mb-6 text-sm text-gray-400">
+                    {isRescheduling
+                        ? "Choose a new time for your appointment. Your previous slot will become available again."
+                        : "Submit your details and the request will start as pending."}
+                    </p>
 
               <form onSubmit={handleSubmit} className="flex flex-col gap-4">
 
               {/* Warning banner — shows on load if already booked, or on submit error */}
-                {(hasActiveBooking || submitError) && (
-                  <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-2 text-sm text-red-600">
-                    {hasActiveBooking
-                      ? "You already have an active booking with this physician. Cancel it before booking again."
-                      : submitError}
-                  </div>
+                {((hasActiveBooking && !isRescheduling) || submitError) && (
+                <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-2 text-sm text-red-600">
+                    {hasActiveBooking && !isRescheduling
+                    ? "You already have an active booking with this physician. Cancel it before booking again."
+                    : submitError}
+                </div>
                 )}
 
                 <div>
@@ -354,15 +381,8 @@ export default function PhysicianPage() {
                     className="w-full resize-none rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-100" />
                 </div>
 
-                {/* {selectedSlot && (
-                  <div className="rounded-2xl bg-sky-50 px-4 py-3 text-sm">
-                    <p className="mb-1 font-semibold text-gray-800">Summary</p>
-                    <p className="text-gray-600">{physician.name}</p>
-                    <p className="text-gray-600">{selectedSlot}</p>
-                  </div>
-                )} */}
+        
 
-                {/* NEW: summary now shows date + time so the patient sees the full picture */}
                 {selectedSlot && selectedDate && (
                   <div className="rounded-2xl bg-sky-50 px-4 py-3 text-sm">
                     <p className="mb-1 font-semibold text-gray-800">Summary</p>
@@ -381,7 +401,13 @@ export default function PhysicianPage() {
                       ? "cursor-not-allowed bg-sky-300"
                       : "bg-sky-500 shadow-md shadow-sky-200 hover:bg-sky-600",
                   ].join(" ")}>
-                  {submitting ? "Submitting…" : "Request appointment"}
+                  {submitting
+                    ? isRescheduling
+                        ? "Rescheduling…"
+                        : "Submitting…"
+                    : isRescheduling
+                        ? "Reschedule appointment"
+                        : "Request appointment"}
                 </button>
 
               </form>

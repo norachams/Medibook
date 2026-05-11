@@ -54,7 +54,7 @@ export default function BookingPage() {
   const [error, setError]           = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("http://localhost:8000/api/physicians")
+    fetch("http://localhost:8000/api/physicians/")
       .then((res) => {
         if (!res.ok) throw new Error("Failed to load physicians.");
         return res.json();

@@ -7,16 +7,20 @@ interface Booking {
   status: "pending" | "confirmed" | "cancelled";
   reason: string;
   created_at: string;
+  patient_name: string;
+  patient_email: string;
+  patient_phone: string;
   physician_name: string;
+  physician_id: number;   // needed to navigate to the right physician for reschedule
   specialty: string;
   display_date: string;
   time: string;
 }
  
-const STATUS_STYLES: Record<Booking["status"], string> = {
-  pending:   "bg-amber-50 text-amber-700",
-  confirmed: "bg-emerald-50 text-emerald-700",
-  cancelled: "bg-red-50 text-red-500",
+const STATUS_STYLES: Record<Booking["status"], { pill: string; dot: string }> = {
+  pending:   { pill: "bg-amber-50 text-amber-700",   dot: "bg-amber-400" },
+  confirmed: { pill: "bg-emerald-50 text-emerald-700", dot: "bg-emerald-400" },
+  cancelled: { pill: "bg-gray-100 text-gray-400",    dot: "bg-gray-300" },
 };
  
 
@@ -28,10 +32,12 @@ export default function PatientDashboardPage() {
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState<string | null>(null);
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+  const [cancelling, setCancelling] = useState<number | null>(null); // tracks which booking is being cancelled
+
 
   useEffect(() => {
     fetch("http://localhost:8000/api/bookings/my", {
-      headers: { Authorization: `Bearer ${token}` }, // identify the logged-in patient
+      headers: { Authorization: `Bearer ${token}` }, 
     })
       .then((res) => {
         if (!res.ok) throw new Error("Failed to load bookings.");
@@ -54,39 +60,54 @@ export default function PatientDashboardPage() {
   navigate("/login");
 };
 
-  const handleCancelBooking = async (bookingId: number) => {
-  try {
-    const res = await fetch(`http://localhost:8000/api/bookings/${bookingId}/cancel`, {
-      method: "PATCH",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    if (!res.ok) throw new Error("Failed to cancel booking.");
-
-    // Update the UI without needing to refresh the page
-    setBookings((currentBookings) =>
-      currentBookings.map((booking) =>
-        booking.id === bookingId
-          ? { ...booking, status: "cancelled" }
-          : booking
-      )
-    );
-
+// ── Cancel ───────────────────────────────────────────────────────────────
+const handleCancel = async (bookingId: number) => {
+    setCancelling(bookingId);
     setOpenMenuId(null);
-  } catch {
-    setError("Could not cancel appointment.");
-  }
-};
-
-const handleRescheduleBooking = (bookingId: number) => {
-  navigate(`/patient/book?reschedule=${bookingId}`);
-};
+    try {
+      const res = await fetch(
+        `http://localhost:8000/api/bookings/${bookingId}/cancel`,
+        { method: "PATCH", headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (!res.ok) throw new Error();
+      // Update status in place — no full refetch needed
+      setBookings((prev) =>
+        prev.map((b) => b.id === bookingId ? { ...b, status: "cancelled" } : b)
+      );
+    } catch {
+      setError("Could not cancel appointment. Try again.");
+    } finally {
+      setCancelling(null);
+    }
+  };
+ 
+  // ── Reschedule — navigate to the physician page, pass booking id as state ─
+  // PhysicianPage will detect this and switch to reschedule mode
+  const handleReschedule = (booking: Booking) => {
+    setOpenMenuId(null);
+    navigate(`/patient/book/${booking.physician_id}`, {
+  state: {
+    rescheduleBookingId: booking.id,
+    bookingDetails: {
+      patient_name: booking.patient_name,
+      patient_email: booking.patient_email,
+      patient_phone: booking.patient_phone,
+      reason: booking.reason,
+    },
+  },
+});
+  };
+ 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const close = () => setOpenMenuId(null);
+    document.addEventListener("click", close);
+    return () => document.removeEventListener("click", close);
+  }, []);
  
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-sky-50 to-blue-100 px-6 py-8 text-gray-800">
+    <div className="min-h-screen bg-linear-to-br from-white via-sky-50 to-blue-100 px-6 py-8 text-gray-800">
       <div className="mx-auto max-w-7xl">
  
         <header className="mb-8 flex items-center justify-between">
@@ -185,85 +206,85 @@ const handleRescheduleBooking = (bookingId: number) => {
               </button>
             </div>
  
-            {/* Loading */}
-            {loading && (
-              <p className="py-10 text-center text-sm text-gray-400">Loading appointments…</p>
-            )}
- 
-            {/* Error */}
-            {error && (
-              <p className="py-10 text-center text-sm text-red-500">{error}</p>
-            )}
- 
-            {/* Empty state */}
-            {!loading && !error && bookings.length === 0 && (
-              <div className="rounded-3xl border border-dashed border-sky-200 bg-sky-50/70 p-10 text-center">
-                <h3 className="text-xl font-semibold text-gray-900">No appointments yet</h3>
-                <p className="mx-auto mt-2 max-w-md text-sm text-gray-500">
-                  Once you book an appointment, it will appear here with its current status.
-                </p>
-              </div>
-            )}
- 
-            {/* Booking cards */}
             {!loading && !error && bookings.length > 0 && (
-              <div className="flex flex-col gap-4">
-                {bookings.map((b) => (
-                  <div
-                    key={b.id}
-                    className="relative rounded-2xl border border-gray-100 bg-gray-50 px-6 py-5"
-                  >
-                    {b.status !== "cancelled" && (
-                      <div className="absolute right-4 top-4">
-                        <button
-                          onClick={() => setOpenMenuId(openMenuId === b.id ? null : b.id)}
-                          className="flex h-8 w-8 items-center justify-center rounded-full text-gray-400 transition hover:bg-white hover:text-gray-700"
-                          aria-label="Appointment options"
-                        >
-                          <span className="text-xl leading-none">⋯</span>
-                        </button>
-
-                        {openMenuId === b.id && (
-                          <div className="absolute right-0 top-9 z-20 w-44 overflow-hidden rounded-xl border border-gray-100 bg-white shadow-lg shadow-gray-200/60">
-                            <button
-                              onClick={() => handleRescheduleBooking(b.id)}
-                              className="block w-full px-4 py-3 text-left text-sm text-gray-600 transition hover:bg-sky-50 hover:text-sky-700"
-                            >
-                              Reschedule
-                            </button>
-
-                            <button
-                              onClick={() => handleCancelBooking(b.id)}
-                              className="block w-full px-4 py-3 text-left text-sm text-red-500 transition hover:bg-red-50"
-                            >
-                              Cancel appointment
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    <div className="flex items-start justify-between gap-6 pr-12">
-                      <div>
-                        <p className="font-semibold text-gray-900">{b.physician_name}</p>
-                        <p className="text-sm text-sky-500">{b.specialty}</p>
-                        <p className="mt-1 text-sm text-gray-500">
-                          {b.display_date} at {b.time}
-                        </p>
-                        <p className="mt-1 text-xs text-gray-400 italic">"{b.reason}"</p>
-                      </div>
-
-                      <span
-                        className={`mt-10 rounded-full px-3 py-1 text-xs font-semibold capitalize ${STATUS_STYLES[b.status]}`}
-                      >
-                        {b.status}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+              <div className="flex flex-col gap-3">
+                {bookings.map((b) => {
+                  const style = STATUS_STYLES[b.status];
+                  const isActive = b.status !== "cancelled";
  
+                  return (
+                    <div key={b.id}
+                      className={[
+                        "relative rounded-2xl border p-5 transition",
+                        // Cancelled cards are visually muted
+                        b.status === "cancelled"
+                          ? "border-gray-100 bg-gray-50 opacity-60"
+                          : "border-gray-100 bg-white shadow-sm hover:shadow-md hover:shadow-gray-100",
+                      ].join(" ")}
+                    >
+                      <div className="flex items-start justify-between gap-4">
+ 
+                        {/* Left: appointment info */}
+                        <div className="flex items-start gap-4">
+                          {/* Colored left border accent */}
+                          <div className={`mt-1 h-10 w-1 flex-shrink-0 rounded-full ${style.dot}`} />
+                          <div>
+                            <p className="font-semibold text-gray-900">{b.physician_name}</p>
+                            <p className="text-sm font-medium text-sky-500">{b.specialty}</p>
+                            <p className="mt-1 text-sm text-gray-500">{b.display_date} at {b.time}</p>
+                            <p className="mt-0.5 text-xs italic text-gray-400">"{b.reason}"</p>
+                          </div>
+                        </div>
+ 
+                        {/* Right: status + menu */}
+                        <div className="flex flex-shrink-0 flex-col items-end gap-2">
+                          <span className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${style.pill}`}>
+                            {b.status}
+                          </span>
+ 
+                          {/* Three-dot menu — only for active bookings */}
+                          {isActive && (
+                            <div className="relative">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation(); // prevent the document click from closing immediately
+                                  setOpenMenuId(openMenuId === b.id ? null : b.id);
+                                }}
+                                className="flex h-7 w-7 items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
+                              >
+                                ···
+                              </button>
+ 
+                              {openMenuId === b.id && (
+                                <div className="absolute right-0 top-8 z-20 w-44 overflow-hidden rounded-xl border border-gray-100 bg-white shadow-lg shadow-gray-200/60">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleReschedule(b)}
+                                    className="block w-full px-4 py-3 text-left text-sm text-gray-600 transition hover:bg-sky-50 hover:text-sky-700"
+                                  >
+                                    Reschedule
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCancel(b.id)}
+                                    disabled={cancelling === b.id}
+                                    className="block w-full px-4 py-3 text-left text-sm text-red-500 transition hover:bg-red-50 disabled:opacity-50"
+                                  >
+                                    {cancelling === b.id ? "Cancelling…" : "Cancel appointment"}
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+ 
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}  
           </section>
         </main>
       </div>
