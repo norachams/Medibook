@@ -64,22 +64,6 @@ function appointmentTop(time: string) {
   return (minutesFromStart / 60) * HOUR_HEIGHT;
 }
 
-function getAppointmentCardStyle(status: BookingStatus) {
-  if (status === "pending") {
-    return "border-amber-200 bg-amber-50 hover:bg-amber-100/70";
-  }
-
-  return "border-sky-100 bg-white hover:bg-sky-50/70";
-}
-
-
-
-const STATUS_STYLES: Record<BookingStatus, string> = {
-  pending: "bg-amber-50 text-amber-700 border-amber-100",
-  confirmed: "bg-emerald-50 text-emerald-700 border-emerald-100",
-  cancelled: "bg-red-50 text-red-600 border-red-100",
-  completed: "bg-slate-100 text-slate-600 border-slate-200",
-};
 
 function getPatientName(booking: Booking) {
   return booking.patient_name ?? booking.patientName ?? "Patient";
@@ -138,58 +122,45 @@ function getInitials(name: string) {
     .toUpperCase();
 }
 
+function getAppointmentCardStyle(status: BookingStatus) {
+  if (status === "pending") {
+    return "border-amber-300 bg-amber-50 shadow-amber-100/70 hover:bg-amber-100/70";
+  }
+
+  if (status === "confirmed") {
+    return "border-sky-100 bg-white hover:bg-sky-50/70";
+  }
+
+  if (status === "completed") {
+    return "border-slate-200 bg-slate-50 hover:bg-slate-100";
+  }
+
+  return "border-red-200 bg-red-50 hover:bg-red-100/70";
+}
+
+function getStatusPillStyle(status: BookingStatus) {
+  if (status === "pending") return "bg-amber-100 text-amber-700";
+  if (status === "confirmed") return "bg-emerald-50 text-emerald-700";
+  if (status === "completed") return "bg-slate-100 text-slate-600";
+  return "bg-red-100 text-red-700";
+}
+
+function getStatusLabel(status: BookingStatus) {
+  if (status === "pending") return "Pending request";
+  if (status === "confirmed") return "Confirmed";
+  if (status === "completed") return "Completed";
+  return "Cancelled";
+}
+
 function StatusBadge({ status }: { status: BookingStatus }) {
   return (
     <span
-      className={`rounded-full border px-3 py-1 text-xs font-semibold ${STATUS_STYLES[status]}`}
+      className={`inline-flex rounded-full px-4 py-2 text-sm font-semibold ${getStatusPillStyle(status)}`}
     >
-      {status.charAt(0).toUpperCase() + status.slice(1)}
+      {getStatusLabel(status)}
     </span>
   );
 }
-
-// function buildWeekDays() {
-//   const today = new Date();
-
-//   const monday = new Date(today);
-//   const dayOfWeek = today.getDay();
-//   const daysFromMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-//   monday.setDate(today.getDate() + daysFromMonday);
-
-//   return Array.from({ length: 5 }, (_, index) => {
-//     const date = new Date(monday);
-//     date.setDate(monday.getDate() + index);
-
-//     return {
-//       key: date.toISOString().slice(0, 10),
-//       weekday: date.toLocaleDateString("en-US", { weekday: "short" }),
-//       dateLabel: date.toLocaleDateString("en-US", {
-//         month: "short",
-//         day: "numeric",
-//       }),
-//       fullLabel: date.toLocaleDateString("en-US", {
-//         month: "long",
-//         day: "numeric",
-//         year: "numeric",
-//       }),
-//       isToday: date.toDateString() === today.toDateString(),
-//     };
-//   });
-// }
-
-// function groupBookingsByDate(bookings: Booking[]) {
-//   return bookings.reduce<Record<string, Booking[]>>((groups, booking) => {
-//     const date = getDisplayDate(booking);
-
-//     if (!groups[date]) {
-//       groups[date] = [];
-//     }
-
-//     groups[date].push(booking);
-//     return groups;
-//   }, {});
-// }
-
 
 
 export default function PhysicianDashboard() {
@@ -363,17 +334,6 @@ const sortedTodayAppointments = useMemo(() => {
   );
 }, [todayAppointments]);
 
-//   const appointmentsByDate = useMemo(
-//   () => groupBookingsByDate(upcomingAppointments),
-//   [upcomingAppointments]
-// );
-
-
-
-  // const firstDayLabel =
-  //   upcomingAppointments.length > 0
-  //     ? getDisplayDate(upcomingAppointments[0])
-  //     : "Today";
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-sky-50 to-blue-100 px-6 py-8 text-slate-900">
@@ -457,15 +417,10 @@ const sortedTodayAppointments = useMemo(() => {
           <main className="rounded-[2rem] bg-white p-8 shadow-sm ring-1 ring-slate-100">
             <div className="mb-7 flex flex-col justify-between gap-4 md:flex-row md:items-center">
           <div>
-            {/* <h2 className="text-3xl font-bold tracking-tight">
-              {view === "upcoming" ? "Upcoming appointments" : "Schedule"}
-            </h2> */}
             <h2 className="text-3xl font-bold tracking-tight">
               Today's Schedule
             </h2>
-            {/* <p className="mt-1 text-sm text-slate-500">
-              Review today’s queue, manage requests, and open patient details from any appointment.
-            </p> */}
+         
           </div>
 
           <div className="flex items-center gap-3">
@@ -493,87 +448,10 @@ const sortedTodayAppointments = useMemo(() => {
               </button>
             </div>
 
-            {/* {view === "schedule" && (
-              <select
-                value={scheduleView}
-                onChange={(e) =>
-                  setScheduleView(e.target.value as "day" | "week" | "month")
-                }
-                className="rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-semibold capitalize text-slate-700 shadow-sm outline-none transition hover:border-sky-200 focus:border-sky-400 focus:ring-2 focus:ring-sky-100"
-              >
-                <option value="day">Day</option>
-                <option value="week">Week</option>
-                <option value="month">Month</option>
-              </select>
-            )} */}
+          
           </div>
         </div>
-        {/* {!loading && (
-  <section className="mb-8 rounded-[1.75rem] border border-sky-100 bg-sky-50/70 p-6">
-    <div className="mb-5 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-widest text-sky-500">
-          Today’s queue
-        </p>
-        <h3 className="mt-1 text-2xl font-bold text-slate-900">
-          {todayAppointments.length} appointment
-          {todayAppointments.length === 1 ? "" : "s"} today
-        </h3>
-      </div>
-
-      <p className="text-sm text-slate-500">
-        {new Date().toLocaleDateString("en-US", {
-          weekday: "long",
-          month: "long",
-          day: "numeric",
-        })}
-      </p>
-    </div>
-
-    {todayAppointments.length > 0 ? (
-      <div className="grid gap-3 md:grid-cols-2">
-        {todayAppointments.map((appointment) => {
-          const patientName = getPatientName(appointment);
-
-          return (
-            <button
-              key={appointment.id}
-              type="button"
-              onClick={() => setSelectedBooking(appointment)}
-              className="rounded-2xl border border-sky-100 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-            >
-              <div className="mb-3 flex items-start justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-sky-100 text-sm font-bold text-sky-700">
-                    {getInitials(patientName)}
-                  </div>
-
-                  <div>
-                    <p className="font-bold text-slate-900">{patientName}</p>
-                    <p className="text-sm text-slate-500">{appointment.time}</p>
-                  </div>
-                </div>
-
-                <StatusBadge status={appointment.status} />
-              </div>
-
-              <p className="text-sm font-medium text-slate-700">
-                {appointment.reason || "No reason provided"}
-              </p>
-            </button>
-          );
-        })}
-      </div>
-    ) : (
-      <div className="rounded-2xl border border-dashed border-sky-200 bg-white/70 px-5 py-8 text-center">
-        <p className="font-bold text-slate-900">No appointments today</p>
-        <p className="mt-1 text-sm text-slate-500">
-          Your upcoming schedule will still appear below.
-        </p>
-      </div>
-    )}
-  </section>
-)} */}
+    
 
             {loading ? (
               <div className="rounded-3xl border border-slate-100 bg-slate-50 px-6 py-12 text-center text-slate-500">
@@ -592,13 +470,7 @@ const sortedTodayAppointments = useMemo(() => {
         </h3>
       </div>
 
-      {/* <button
-        type="button"
-        onClick={() => setView("schedule")}
-        className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
-      >
-        View schedule
-      </button> */}
+   
     </div>
 
     {sortedTodayAppointments.length > 0 ? (
@@ -629,14 +501,14 @@ const sortedTodayAppointments = useMemo(() => {
                   onClick={() => setSelectedBooking(appointment)}
                   style={{
                     top: appointmentTop(appointment.time),
-                    height: 72,
+                    height: 92,
                   }}
                   className={[
-                    "absolute left-0 right-0 rounded-2xl border px-4 py-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md",
+                    "absolute left-0 right-0 rounded-2xl border px-5 py-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md",
                     getAppointmentCardStyle(appointment.status),
                   ].join(" ")}
                 >
-                  <div className="flex h-full items-center justify-between gap-4">
+                  <div className="flex h-full items-center justify-between gap-5">
                     <div className="flex min-w-0 items-center gap-3">
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-sky-100 text-xs font-bold text-sky-700">
                         {getInitials(patientName)}
@@ -652,16 +524,15 @@ const sortedTodayAppointments = useMemo(() => {
                       </div>
                     </div>
 
-                    <div className="shrink-0 text-right">
-                      <p className="font-bold text-slate-900">
-                        {appointment.time}
-                      </p>
-                      {appointment.status === "pending" && (
-                        <p className="text-xs font-semibold text-amber-600">
-                          Needs review
-                        </p>
-                      )}
+                   <div className="flex shrink-0 flex-col items-end justify-center">
+                    <p className="text-lg font-bold text-slate-900">
+                      {appointment.time}
+                    </p>
+
+                    <div className="mt-2">
+                      <StatusBadge status={appointment.status} />
                     </div>
+                  </div>
                   </div>
                 </button>
               );
@@ -682,12 +553,7 @@ const sortedTodayAppointments = useMemo(() => {
           
  ) : (
   <section className="space-y-5">
-    {/* <div className="rounded-3xl border border-slate-100 bg-slate-50 px-5 py-4">
-      <h3 className="text-lg font-bold text-slate-900">Full schedule</h3>
-      <p className="mt-1 text-sm text-slate-500">
-        Appointments are grouped by date. Click any appointment to open the patient drawer.
-      </p>
-    </div> */}
+    
 
     {upcomingAppointments.length > 0 ? (
       Object.entries(appointmentsByDateKey).map(([dateKey, appointments]) => (
@@ -714,8 +580,10 @@ const sortedTodayAppointments = useMemo(() => {
                   key={appointment.id}
                   type="button"
                   onClick={() => setSelectedBooking(appointment)}
-                  className="grid w-full gap-4 px-5 py-5 text-left transition hover:bg-sky-50/50 md:grid-cols-[90px_1fr_1.2fr_auto] md:items-center"
-                >
+                  className={[
+                    "grid w-full gap-4 rounded-2xl border px-5 py-5 text-left shadow-sm transition md:grid-cols-[90px_1fr_1.2fr_auto] md:items-center",
+                    getAppointmentCardStyle(appointment.status),
+                  ].join(" ")}                >
                   <div>
                     <p className="text-lg font-bold text-slate-900">
                       {appointment.time}
@@ -760,118 +628,8 @@ const sortedTodayAppointments = useMemo(() => {
     )}
   </section>
 )}
-    {/* {scheduleView === "week" && (
-      <div className="grid gap-3 md:grid-cols-5">
-        {weekDays.map((day) => {
-          const dayAppointments = upcomingAppointments.filter(
-            (appointment) => getDisplayDate(appointment) === day.fullLabel
-          );
-
-          return (
-            <div
-              key={day.key}
-              className={`min-h-[260px] rounded-3xl p-4 shadow-sm ring-1 transition ${
-                day.isToday
-                  ? "bg-sky-50 ring-sky-200"
-                  : "bg-white ring-slate-100"
-              }`}
-            >
-              <div className="mb-4 flex items-start justify-between gap-3">
-                <div>
-                  <p className="font-bold text-slate-900">{day.weekday}</p>
-                  <p className="mt-1 text-sm text-slate-500">
-                    {day.dateLabel}
-                  </p>
-                </div>
-
-                {day.isToday && (
-                  <span className="rounded-full bg-sky-100 px-3 py-1 text-xs font-bold text-sky-700">
-                    Today
-                  </span>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                {dayAppointments.length > 0 ? (
-                  dayAppointments.map((appointment) => (
-                    <div
-                          key={appointment.id}
-                          onClick={() => setSelectedBooking(appointment)}
-                          className="flex cursor-pointer items-center justify-between gap-4 rounded-2xl border border-slate-100 bg-sky-50 px-5 py-4 transition hover:bg-sky-100"
-                        >
-                      <p className="text-sm font-bold text-slate-900">
-                        {appointment.time}
-                      </p>
-                      <p className="text-sm text-slate-600">
-                        {getPatientName(appointment)}
-                      </p>
-                      <p className="mt-1 line-clamp-2 text-xs text-slate-400">
-                        {appointment.reason}
-                      </p>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-slate-400">No visits</p>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    )} */}
-
-    {/* {scheduleView === "month" && (
-      <div className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-100">
-        <div className="mb-4 flex items-center justify-between">
-          <h4 className="font-bold text-slate-900">May 2026</h4>
-          <p className="text-sm text-slate-500">
-            {upcomingAppointments.length} appointments
-          </p>
-        </div> */}
-
-        {/* <div className="grid grid-cols-7 gap-2 text-center text-xs font-semibold text-slate-400">
-          {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
-            <div key={day}>{day}</div>
-          ))}
-        </div>
-
-        <div className="mt-3 grid grid-cols-7 gap-2 text-sm">
-          {Array.from({ length: 35 }, (_, index) => {
-            const day = index - 3;
-            const hasAppointment = upcomingAppointments.some((appointment) =>
-              getDisplayDate(appointment).includes(`May ${day}, 2026`)
-            );
-
-            return (
-              <div
-                key={index}
-                className={`min-h-[72px] rounded-2xl border p-2 ${
-                  day < 1 || day > 31
-                    ? "border-transparent text-slate-300"
-                    : hasAppointment
-                    ? "border-sky-100 bg-sky-50 text-slate-900"
-                    : "border-slate-100 bg-white text-slate-600"
-                }`}
-              >
-                {day >= 1 && day <= 31 && (
-                  <>
-                    <p className="font-semibold">{day}</p>
-                    {hasAppointment && (
-                      <p className="mt-2 rounded-full bg-sky-500 px-2 py-1 text-xs font-bold text-white">
-                        Visit
-                      </p>
-                    )}
-                  </>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    )} */}
-
-
-          </main>
+   
+         </main>
 
           {requestsOpen && (
             <aside className="rounded-[2rem] bg-white p-6 shadow-sm ring-1 ring-slate-100">
