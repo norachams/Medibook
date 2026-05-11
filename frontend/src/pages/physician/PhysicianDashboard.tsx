@@ -246,32 +246,39 @@ const doctorName =
     }
   }
 
-  async function updateBookingStatus(id: number, status: BookingStatus) {
-    try {
-      const res = await fetch(`${API}/${id}/status`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ status }),
-      });
+async function updateBookingStatus(
+  id: number,
+  status: BookingStatus,
+  declineReason?: string
+) {
+  try {
+    const res = await fetch(`${API}/${id}/status`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        status,
+        decline_reason: declineReason,
+      }),
+    });
 
-      const updatedBooking = await res.json();
+    const updatedBooking = await res.json();
 
-      if (!res.ok) {
-        throw new Error(updatedBooking.error ?? "Could not update booking.");
-      }
-
-      setBookings((current) =>
-        current.map((booking) =>
-          booking.id === id ? { ...booking, ...updatedBooking } : booking
-        )
-      );
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong.");
+    if (!res.ok) {
+      throw new Error(updatedBooking.error ?? "Could not update booking.");
     }
+
+    setBookings((current) =>
+      current.map((booking) =>
+        booking.id === id ? { ...booking, ...updatedBooking } : booking
+      )
+    );
+  } catch (err) {
+    setError(err instanceof Error ? err.message : "Something went wrong.");
   }
+}
 
   function handleBookingCompleted(bookingId: number) {
   setBookings((current) =>

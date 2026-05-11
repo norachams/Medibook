@@ -47,17 +47,20 @@ def init_db():
         );
  
         CREATE TABLE IF NOT EXISTS bookings (
-            id             INTEGER PRIMARY KEY AUTOINCREMENT,
-            patient_id     INTEGER NOT NULL,
-            physician_id   INTEGER NOT NULL,
-            slot_id        INTEGER NOT NULL,
-            patient_name   TEXT    NOT NULL,
-            patient_email  TEXT    NOT NULL,
-            patient_phone  TEXT,
-            reason         TEXT    NOT NULL,
-            status         TEXT    DEFAULT 'pending'
-                                   CHECK(status IN ('pending', 'confirmed', 'cancelled')),
-            created_at     DATETIME DEFAULT CURRENT_TIMESTAMP,
+            id               INTEGER PRIMARY KEY AUTOINCREMENT,
+            patient_id       INTEGER NOT NULL,
+            physician_id     INTEGER NOT NULL,
+            slot_id          INTEGER NOT NULL,
+            patient_name     TEXT    NOT NULL,
+            patient_email    TEXT    NOT NULL,
+            patient_phone    TEXT,
+            reason           TEXT    NOT NULL,
+            status           TEXT    DEFAULT 'pending'
+                                    CHECK(status IN ('pending', 'confirmed', 'cancelled', 'completed')),
+            decline_reason   TEXT,
+            physician_notes  TEXT,
+            completed_at     DATETIME,
+            created_at       DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (patient_id)   REFERENCES users (id),
             FOREIGN KEY (physician_id) REFERENCES physician_profiles (id),
             FOREIGN KEY (slot_id)      REFERENCES appointment_slots (id)

@@ -617,9 +617,13 @@ def update_booking_status(booking_id):
 
     data = request.get_json(silent=True)
     new_status = data.get("status") if data else None
+    decline_reason = (data.get("decline_reason") or "").strip() if data else ""
 
     if new_status not in ["pending", "confirmed", "cancelled", "completed"]:
         return jsonify({"error": "Invalid status."}), 422
+
+    if new_status == "cancelled" and not decline_reason:
+        return jsonify({"error": "Decline reason is required."}), 422
 
     conn = get_db()
 
@@ -649,16 +653,26 @@ def update_booking_status(booking_id):
         conn.close()
         return jsonify({"error": "Booking not found."}), 404
 
-    conn.execute(
-        """
-        UPDATE bookings
-        SET status = ?
-        WHERE id = ?
-        """,
-        (new_status, booking_id),
-    )
+    if new_status == "cancelled":
+        conn.execute(
+            """
+            UPDATE bookings
+            SET status = ?,
+                decline_reason = ?
+            WHERE id = ?
+            """,
+            (new_status, decline_reason, booking_id),
+        )
+    else:
+        conn.execute(
+            """
+            UPDATE bookings
+            SET status = ?
+            WHERE id = ?
+            """,
+            (new_status, booking_id),
+        )
 
-    # If the physician cancels/declines it, free the slot again.
     if new_status == "cancelled":
         conn.execute(
             """
@@ -677,6 +691,7 @@ def update_booking_status(booking_id):
             b.id,
             b.status,
             b.reason,
+            b.decline_reason,
             b.patient_name,
             b.patient_email,
             b.patient_phone,
@@ -702,6 +717,7 @@ def update_booking_status(booking_id):
         "id": updated["id"],
         "status": updated["status"],
         "reason": updated["reason"],
+        "decline_reason": updated["decline_reason"] or "",
         "patient_name": updated["patient_name"],
         "patient_email": updated["patient_email"],
         "patient_phone": updated["patient_phone"],

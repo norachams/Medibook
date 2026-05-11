@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { ChevronsRight, Maximize2, Minimize2 } from "lucide-react";
 import { motion } from "framer-motion";
 import CompleteAppointmentModal from "./CompleteAppointmentModal";
+import DeclineAppointmentModal from "./DeclineAppointmentModal";
 
 interface Booking {
   id: number;
@@ -59,7 +60,8 @@ interface PatientDetailDrawerProps {
   onCompleted: (bookingId: number) => void;
   onStatusChange: (
     bookingId: number,
-    status: "confirmed" | "cancelled"
+    status: "confirmed" | "cancelled",
+    declineReason?: string
   ) => Promise<void>;
 }
 
@@ -77,6 +79,7 @@ export default function PatientDetailDrawer({
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
   const [completeModalOpen, setCompleteModalOpen] = useState(false);
+  const [declineModalOpen, setDeclineModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchPatientDetails = async () => {
@@ -147,12 +150,13 @@ export default function PatientDetailDrawer({
   }
 };
 
-const handleDecline = async () => {
+const handleDecline = async (declineReason: string) => {
   setSaving(true);
   setError(null);
 
   try {
-    await onStatusChange(booking.id, "cancelled");
+    await onStatusChange(booking.id, "cancelled", declineReason);
+    setDeclineModalOpen(false);
     onClose();
   } catch {
     setError("Could not decline appointment.");
@@ -353,7 +357,7 @@ const handleDecline = async () => {
         <button
           type="button"
           disabled={saving}
-          onClick={handleDecline}
+          onClick={() => setDeclineModalOpen(true)}
           className="rounded-xl border border-red-200 py-3 text-sm font-semibold text-red-500 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {saving ? "Updating..." : "Decline"}
@@ -407,6 +411,16 @@ const handleDecline = async () => {
     loading={saving}
     onClose={() => setCompleteModalOpen(false)}
     onConfirm={handleComplete}
+  />
+)}
+
+{declineModalOpen && patient && (
+  <DeclineAppointmentModal
+    patientName={patient.full_name || booking.patient_name}
+    appointmentLabel={`${booking.display_date} at ${booking.time}`}
+    loading={saving}
+    onClose={() => setDeclineModalOpen(false)}
+    onConfirm={handleDecline}
   />
 )}
    
