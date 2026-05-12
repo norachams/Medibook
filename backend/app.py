@@ -22,6 +22,7 @@ def create_app():
     CORS(app, resources={r"/api/*": {"origins": [
         "http://localhost:5173",
         "http://localhost:5174",
+        "https://medibook-gray.vercel.app"
     ]}})
     JWTManager(app)
 
