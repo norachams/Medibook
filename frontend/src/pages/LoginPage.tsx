@@ -21,7 +21,8 @@ interface FieldErrors {
 // const API = "http://localhost:8000/api/auth";
 // const API = "https://medibook-backend-1qi8.onrender.com/api/auth";
 
-const API = `${import.meta.env.VITE_API_URL}/api/bookings`;
+const API = `${import.meta.env.VITE_API_URL}/api/auth`;
+
 
 async function apiLogin(email: string, password: string): Promise<AuthResponse> {
   const res = await fetch(`${API}/login`, {
