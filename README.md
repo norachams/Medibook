@@ -42,16 +42,6 @@ Email: emily.wilson@medbook.dev
 Password: 123123
 ```
 
-From the app, users can:
-
-- Sign up or log in as a patient or physician
-- Browse available physicians
-- View appointment slots
-- Book medical appointments
-- Track upcoming and past bookings
-- Access physician dashboards for managing appointments and patient details
-
-
 ## Option 2: Run Locally
 
 
@@ -122,36 +112,51 @@ Once both servers are running, open:
 ```bash
 http://localhost:5173
 ```
+---
 
+# What Was Built
 
-## What was built
+Medibook includes two main user experiences: a patient view for booking and managing appointments, and a physician view for reviewing requests, updating appointment statuses, and managing patient visits.
 
-Medibook includes two main user experiences: a patient view for booking and managing appointments, and a physician view for reviewing requests and managing patient visits.
+I also created a video walkthrough that shows the main features and user flows:
 
----<img width="1463" height="784" alt="Screenshot 2026-05-12 at 5 33 04 AM" src="https://github.com/user-attachments/assets/62f9a5a7-a4f4-4e96-a182-541e3e798ddd" />
+[Watch the Medibook Demo](https://youtu.be/gscCyfdw8OM)
 
 
 ### Patient View
 
-The patient side of Medibook focuses on making it easy to find a doctor, book an appointment, and keep track of upcoming and past visits.
+The patient view is designed to help users manage their healthcare appointments from one place. Patients can create an account, complete their profile with medical information, book appointments, and track their visits over time.
 
 Patients can:
 
 - Create an account and log in
+- Edit their profile and add medical information such as allergies, medications, conditions, and emergency contact details
 - View their appointment dashboard
 - Browse available physicians
 - View physician profiles and available time slots
-- Submit appointment requests
+- Book appointments with available physicians
+- Reschedule or cancel appointments
 - Track appointment statuses
-- View completed appointments and physician notes when available
+- View upcoming, past, and completed appointments
+- View physician notes after an appointment is completed
 
-#### Patient Dashboard
+### Physician View
 
+The physician view is designed to support the appointment workflow from the provider’s side. Physicians can review booking requests, manage appointment statuses, and access relevant patient information before and after a visit.
 
+Physicians can:
 
+- Log in with a physician account
+- View incoming booking requests
+- Confirm, cancel, or complete appointments
+- View patient details from a booking request
+- Access patient profile information and medical history
+- Add physician notes after an appointment
+- Review past appointments and previous patients
 
+---
 
-## Key Technical and Product Decisions
+# Key Technical and Product Decisions
 
 ### Role-based patient and physician views
 
@@ -181,22 +186,33 @@ I also wanted the app to include small details that make it feel closer to a rea
 
 On the physician side, doctors can view past patients and past appointments, which makes the experience feel less temporary. Instead of each booking disappearing after it is handled, both patients and physicians have a record of previous visits and important appointment details.
 
+---
+## Future Enhancements
 
+- **Account verification and onboarding**  
+  Add a more complete account creation flow, including email verification, password reset, and a more detailed onboarding process for patients and physicians.
 
-  # Future Enhancements 
+- **Advanced physician search and filters**  
+  Add filters for specialty, location, availability, language, ratings, and appointment type to help patients find the right physician more easily.
 
--  **Advanced physician search and filters**  
-  Add filters for specialty, location, availability, language, ratings, and appointment type.
-
-- **Secure file uploads**  
-  Let patients upload documents such as referral forms, lab results, or insurance information before appointments.
-  
 - **Expanded booking calendar**  
   Allow patients to browse future appointment availability through a full calendar view instead of only seeing slots for the upcoming week.
 
+- **Appointment notifications and reminders**  
+  Send email, SMS, or in-app notifications when appointments are booked, confirmed, cancelled, rescheduled, or coming up soon.
+
+- **Secure file uploads**  
+  Let patients upload documents such as referral forms, lab results, or insurance information before appointments.
+
+- **Improved rescheduling flow**  
+  Make rescheduling smoother by allowing patients and physicians to suggest new times and automatically update appointment statuses.
+
 - **Improve backend validation and error handling**  
-  Add more robust validation for appointment creation, user input, and booking conflicts to make the API more reliable.
+  Add more robust validation for appointment creation, user input, unavailable slots, duplicate bookings, and booking conflicts.
 
 - **Add automated testing**  
-  Implement unit and integration tests for key flows such as authentication, booking appointments, updating appointment statuses, and viewing patient details.
+  Implement unit and integration tests for key flows such as authentication, booking appointments, updating appointment statuses, editing profiles, and viewing patient details.
+
+- **Production security improvements**  
+  Add stronger authorization checks, audit logs, rate limiting, and stricter handling of sensitive patient information before using the app with real data.
 
