@@ -128,11 +128,11 @@ export default function PatientPastAppointmentsPage() {
                     </div>
                   </div>
 
-                  {appointment.completed_at && (
-                    <p className="mt-4 text-xs text-gray-400">
-                      Completed on {appointment.completed_at}
-                    </p>
-                  )}
+                  {/* {appointment.completed_at && (
+                    // <p className="mt-4 text-xs text-gray-400">
+                    //   Completed on {appointment.completed_at}
+                    // </p>
+                  )} */}
                 </div>
               ))}
             </div>

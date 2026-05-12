@@ -95,9 +95,9 @@ function formatDateHeading(dateString: string) {
   });
 }
 
-function getCreatedAt(booking: Booking) {
-  return booking.created_at ?? booking.createdAt ?? "";
-}
+// function getCreatedAt(booking: Booking) {
+//   return booking.created_at ?? booking.createdAt ?? "";
+// }
 
 function normalizeBookingForDrawer(booking: Booking) {
   return {
@@ -697,9 +697,9 @@ const sortedTodayAppointments = useMemo(() => {
                             <p className="font-bold text-slate-900">
                               {patientName}
                             </p>
-                            <p className="text-sm text-slate-500">
+                            {/* <p className="text-sm text-slate-500">
                               Submitted {getCreatedAt(request) || "recently"}
-                            </p>
+                            </p> */}
                           </div>
                         </div>
 

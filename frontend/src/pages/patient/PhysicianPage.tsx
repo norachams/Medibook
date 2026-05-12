@@ -4,6 +4,7 @@ import type { Physician,Slot } from "../../types/physician";
 import { useAuth } from "../../context/AuthContext";
 
 
+
 // ---------------------------------------------------------------------------
 // Helper — build a 7-day strip starting from today
 // Returns array of { date: "2026-05-14", label: "Wed", day: "14" }
@@ -40,8 +41,8 @@ function timeToMinutes(time: string) {
 export default function PhysicianPage() {
   const { physicianId } = useParams();
   const navigate = useNavigate();
-  const { token }       = useAuth();
-  const location        = useLocation();
+  const { token, user } = useAuth();
+  const location = useLocation();
 
   // If coming from dashboard via "Reschedule", location.state carries the booking id
   const locationState = location.state as {
@@ -59,6 +60,26 @@ const rescheduleBookingId: number | null =
 
 const existingBookingDetails = locationState?.bookingDetails ?? null;
 
+const currentUser = user as
+  | {
+      full_name?: string;
+      fullName?: string;
+      name?: string;
+      email?: string;
+      phone?: string;
+    }
+  | null
+  | undefined;
+
+const userFullName =
+  currentUser?.full_name ??
+  currentUser?.fullName ??
+  currentUser?.name ??
+  "";
+
+const userEmail = currentUser?.email ?? "";
+const userPhone = currentUser?.phone ?? "";
+
 
   const [physician, setPhysician]   = useState<Physician | null>(null);
   const [loading, setLoading]       = useState(true);
@@ -67,10 +88,20 @@ const existingBookingDetails = locationState?.bookingDetails ?? null;
   const [selectedSlotId, setSelectedSlotId] = useState<number | null>(null);
   const [selectedDate, setSelectedDate]         = useState<string | null>(null); 
   const [hasActiveBooking, setHasActiveBooking] = useState(false);
-  const [fullName, setFullName] = useState(existingBookingDetails?.patient_name ?? "");
-  const [email, setEmail] = useState(existingBookingDetails?.patient_email ?? "");
-  const [phone, setPhone] = useState(existingBookingDetails?.patient_phone ?? "");
-  const [reason, setReason] = useState(existingBookingDetails?.reason ?? "");
+  const [fullName, setFullName] = useState(
+  existingBookingDetails?.patient_name ?? userFullName);
+
+    const [email, setEmail] = useState(
+    existingBookingDetails?.patient_email ?? userEmail
+    );
+
+    const [phone, setPhone] = useState(
+    existingBookingDetails?.patient_phone ?? userPhone
+    );
+
+    const [reason, setReason] = useState(
+    existingBookingDetails?.reason ?? ""
+    );
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
@@ -388,14 +419,14 @@ const existingBookingDetails = locationState?.bookingDetails ?? null;
                 <div>
                   <label className="mb-1 block text-sm font-medium text-gray-700">Full name</label>
                   <input required value={fullName} onChange={(e) => setFullName(e.target.value)}
-                    placeholder="Nora Chamseddin"
+                    placeholder="John Smith"
                     className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-100" />
                 </div>
 
                 <div>
                   <label className="mb-1 block text-sm font-medium text-gray-700">Email</label>
                   <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)}
-                    placeholder="nora@example.com"
+                    placeholder="john@example.com"
                     className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-100" />
                 </div>
 
