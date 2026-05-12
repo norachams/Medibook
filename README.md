@@ -1,7 +1,6 @@
 # Medibook
-# About Medibook
 
-Medibook is a full-stack medical appointment booking platform designed to simplify the way patients and physicians manage healthcare appointments.
+A full-stack medical appointment booking platform designed to simplify the way patients and physicians manage healthcare appointments.
 
 Patients can search for physicians, view available time slots, book appointments, and track their current bookings and view past appionemnts with doctor notes.
 
@@ -16,7 +15,32 @@ Medibook can be accessed either through the deployed web application or by runni
 
 You can try the deployed version of Medibook here:
 
-[Live Demo]()
+[Live Demo](https://medibook-gray.vercel.app/login)
+
+### Demo Accounts
+
+Use the following demo credentials to explore the app as either a patient or physician.
+
+#### Patient Account
+
+```txt
+Email: patient@medbook.dev
+Password: patient123
+```
+
+#### Physician Accounts
+```txt
+Email: sarah.chen@medbook.dev
+Password: 123123
+```
+```txt
+Email: james.okafor@medbook.dev
+Password: 123123
+```
+```txt
+Email: emily.wilson@medbook.dev
+Password: 123123
+```
 
 From the app, users can:
 
@@ -27,7 +51,6 @@ From the app, users can:
 - Track upcoming and past bookings
 - Access physician dashboards for managing appointments and patient details
 
-To run Medibook locally, follow the steps below.
 
 ## Option 2: Run Locally
 
@@ -101,7 +124,32 @@ http://localhost:5173
 ```
 
 
-# What was built
+## What was built
+
+Medibook includes two main user experiences: a patient view for booking and managing appointments, and a physician view for reviewing requests and managing patient visits.
+
+---<img width="1463" height="784" alt="Screenshot 2026-05-12 at 5 33 04 AM" src="https://github.com/user-attachments/assets/62f9a5a7-a4f4-4e96-a182-541e3e798ddd" />
+
+
+### Patient View
+
+The patient side of Medibook focuses on making it easy to find a doctor, book an appointment, and keep track of upcoming and past visits.
+
+Patients can:
+
+- Create an account and log in
+- View their appointment dashboard
+- Browse available physicians
+- View physician profiles and available time slots
+- Submit appointment requests
+- Track appointment statuses
+- View completed appointments and physician notes when available
+
+#### Patient Dashboard
+
+
+
+
 
 ## Key Technical and Product Decisions
 
