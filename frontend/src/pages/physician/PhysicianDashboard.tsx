@@ -32,14 +32,11 @@ interface Booking {
 
 const API = "http://localhost:8000/api/bookings";
 
-const DAY_START_HOUR = 8;
-const DAY_END_HOUR = 18;
+// const DAY_START_HOUR = 8;
+// const DAY_END_HOUR = 18;
 const HOUR_HEIGHT = 88;
 
-const DAY_HOURS = Array.from(
-  { length: DAY_END_HOUR - DAY_START_HOUR + 1 },
-  (_, index) => DAY_START_HOUR + index
-);
+
 
 function formatHour(hour: number) {
   if (hour === 12) return "12 PM";
@@ -58,13 +55,12 @@ function timeToMinutes(time: string) {
   return hours * 60 + minutes;
 }
 
-function appointmentTop(time: string) {
-  const startOfDay = DAY_START_HOUR * 60;
+function appointmentTop(time: string, startHour: number) {
+  const startOfDay = startHour * 60;
   const minutesFromStart = timeToMinutes(time) - startOfDay;
 
-  return (minutesFromStart / 60) * HOUR_HEIGHT;
+  return Math.max(0, (minutesFromStart / 60) * HOUR_HEIGHT);
 }
-
 
 function getPatientName(booking: Booking) {
   return booking.patient_name ?? booking.patientName ?? "Patient";
@@ -80,6 +76,28 @@ function getBookingDateKey(booking: Booking) {
 
 function getTodayKey() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function buildWeekDays() {
+  const today = new Date();
+  const currentDay = today.getDay(); // Sunday = 0
+
+  const startOfWeek = new Date(today);
+  startOfWeek.setDate(today.getDate() - currentDay);
+
+  return Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(startOfWeek);
+    date.setDate(startOfWeek.getDate() + index);
+
+    const dateKey = date.toISOString().slice(0, 10);
+
+    return {
+      date: dateKey,
+      dayName: date.toLocaleDateString("en-US", { weekday: "short" }),
+      dayNumber: date.toLocaleDateString("en-US", { day: "numeric" }),
+      isToday: dateKey === getTodayKey(),
+    };
+  });
 }
 
 function buildMonthDays() {
@@ -121,22 +139,8 @@ function buildMonthDays() {
   return days;
 }
 
-function formatDateHeading(dateString: string) {
-  if (!dateString) return "Upcoming";
 
-  const date = new Date(`${dateString}T00:00:00`);
 
-  return date.toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
-// function getCreatedAt(booking: Booking) {
-//   return booking.created_at ?? booking.createdAt ?? "";
-// }
 
 function normalizeBookingForDrawer(booking: Booking) {
   return {
@@ -344,9 +348,13 @@ const upcomingAppointments = bookings.filter(
     booking.status === "confirmed" || booking.status === "pending"
 );
 
-const appointmentsByDateKey = upcomingAppointments.reduce<Record<string, Booking[]>>(
+
+
+const weekDays = buildWeekDays();
+
+const weekAppointmentsByDate = upcomingAppointments.reduce<Record<string, Booking[]>>(
   (groups, booking) => {
-    const dateKey = getBookingDateKey(booking) || getDisplayDate(booking);
+    const dateKey = getBookingDateKey(booking);
 
     if (!groups[dateKey]) {
       groups[dateKey] = [];
@@ -412,6 +420,26 @@ const currentMonthLabel = now.toLocaleDateString("en-US", {
   year: "numeric",
 });
 
+let dayCalendarBounds = { startHour: 8, endHour: 18 };
+
+if (sortedTodayAppointments.length > 0) {
+  const appointmentMinutes = sortedTodayAppointments.map((booking) =>
+    timeToMinutes(booking.time)
+  );
+
+  const earliest = Math.min(...appointmentMinutes);
+  const latest = Math.max(...appointmentMinutes);
+
+  dayCalendarBounds = {
+    startHour: Math.min(8, Math.floor(earliest / 60)),
+    endHour: Math.max(18, Math.ceil((latest + 60) / 60)),
+  };
+}
+
+const visibleDayHours = Array.from(
+  { length: dayCalendarBounds.endHour - dayCalendarBounds.startHour + 1 },
+  (_, index) => dayCalendarBounds.startHour + index
+);
 
 
 
@@ -558,69 +586,79 @@ const currentMonthLabel = now.toLocaleDateString("en-US", {
 ) : calendarView === "day" ? (
   <section>
     {sortedTodayAppointments.length > 0 ? (
-      <div className="relative rounded-3xl border border-slate-100 bg-white p-5">
-        <div className="absolute bottom-5 left-[86px] top-5 w-px bg-slate-100" />
+      <div className="rounded-3xl border border-slate-100 bg-white p-5">
+        <div className="max-h-[70vh] overflow-y-auto">
+          <div
+            className="relative"
+            style={{
+              minHeight: `${visibleDayHours.length * HOUR_HEIGHT}px`,
+            }}
+          >
+            <div className="absolute bottom-0 left-[86px] top-0 w-px bg-slate-100" />
 
-        <div className="relative">
-          {DAY_HOURS.map((hour) => (
-            <div
-              key={hour}
-              className="grid min-h-[88px] grid-cols-[86px_1fr] border-b border-slate-100 last:border-b-0"
-            >
-              <div className="pt-2 text-sm font-medium text-slate-400">
-                {formatHour(hour)}
+            {visibleDayHours.map((hour) => (
+              <div
+                key={hour}
+                className="grid min-h-[88px] grid-cols-[86px_1fr] border-b border-slate-100 last:border-b-0"
+              >
+                <div className="pt-2 text-sm font-medium text-slate-400">
+                  {formatHour(hour)}
+                </div>
+                <div />
               </div>
-              <div />
+            ))}
+
+            <div className="absolute left-[106px] right-0 top-0">
+              {sortedTodayAppointments.map((appointment) => {
+                const patientName = getPatientName(appointment);
+
+                return (
+                  <button
+                    key={appointment.id}
+                    type="button"
+                    onClick={() => setSelectedBooking(appointment)}
+                    style={{
+                      top: appointmentTop(
+                        appointment.time,
+                        dayCalendarBounds.startHour
+                      ),
+                      height: 92,
+                    }}
+                    className={[
+                      "absolute left-0 right-0 rounded-2xl border px-5 py-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md",
+                      getAppointmentCardStyle(appointment.status),
+                    ].join(" ")}
+                  >
+                    <div className="flex h-full items-center justify-between gap-5">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-sky-100 text-xs font-bold text-sky-700">
+                          {getInitials(patientName)}
+                        </div>
+
+                        <div className="min-w-0">
+                          <p className="truncate font-bold text-slate-900">
+                            {patientName}
+                          </p>
+                          <p className="truncate text-sm text-slate-500">
+                            {appointment.reason || "No reason provided"}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex shrink-0 flex-col items-end justify-center">
+                        <p className="text-lg font-bold text-slate-900">
+                          {appointment.time}
+                        </p>
+
+                        <div className="mt-2">
+                          <StatusBadge status={appointment.status} />
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
-          ))}
-
-          <div className="absolute left-[106px] right-0 top-0">
-            {sortedTodayAppointments.map((appointment) => {
-              const patientName = getPatientName(appointment);
-
-              return (
-                <button
-                  key={appointment.id}
-                  type="button"
-                  onClick={() => setSelectedBooking(appointment)}
-                  style={{
-                    top: appointmentTop(appointment.time),
-                    height: 92,
-                  }}
-                  className={[
-                    "absolute left-0 right-0 rounded-2xl border px-5 py-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md",
-                    getAppointmentCardStyle(appointment.status),
-                  ].join(" ")}
-                >
-                  <div className="flex h-full items-center justify-between gap-5">
-                    <div className="flex min-w-0 items-center gap-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-sky-100 text-xs font-bold text-sky-700">
-                        {getInitials(patientName)}
-                      </div>
-
-                      <div className="min-w-0">
-                        <p className="truncate font-bold text-slate-900">
-                          {patientName}
-                        </p>
-                        <p className="truncate text-sm text-slate-500">
-                          {appointment.reason || "No reason provided"}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex shrink-0 flex-col items-end justify-center">
-                      <p className="text-lg font-bold text-slate-900">
-                        {appointment.time}
-                      </p>
-
-                      <div className="mt-2">
-                        <StatusBadge status={appointment.status} />
-                      </div>
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
           </div>
         </div>
       </div>
@@ -634,79 +672,89 @@ const currentMonthLabel = now.toLocaleDateString("en-US", {
     )}
   </section>
 ) : calendarView === "week" ? (
-  <section className="space-y-5">
-    {upcomingAppointments.length > 0 ? (
-      Object.entries(appointmentsByDateKey).map(([dateKey, appointments]) => (
-        <div
-          key={dateKey}
-          className="overflow-hidden rounded-3xl border border-slate-100 bg-white"
-        >
-          <div className="border-b border-slate-100 bg-slate-50 px-5 py-4">
-            <h4 className="font-bold text-slate-900">
-              {dateKey.includes("-") ? formatDateHeading(dateKey) : dateKey}
-            </h4>
-            <p className="mt-1 text-sm text-slate-500">
-              {appointments.length} appointment
-              {appointments.length === 1 ? "" : "s"}
+  <section>
+    <div className="overflow-hidden rounded-3xl border border-slate-100 bg-white">
+      <div className="grid grid-cols-7 border-b border-slate-100 bg-slate-50">
+        {weekDays.map((day) => (
+          <div
+            key={day.date}
+            className="px-3 py-4 text-center"
+          >
+            <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
+              {day.dayName}
             </p>
+
+            <div className="mt-2 flex justify-center">
+              <span
+                className={[
+                  "flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold",
+                  day.isToday
+                    ? "bg-sky-500 text-white"
+                    : "text-slate-700",
+                ].join(" ")}
+              >
+                {day.dayNumber}
+              </span>
+            </div>
           </div>
-
-          <div className="divide-y divide-slate-100">
-            {appointments.map((appointment) => {
-              const patientName = getPatientName(appointment);
-
-              return (
-                <button
-                  key={appointment.id}
-                  type="button"
-                  onClick={() => setSelectedBooking(appointment)}
-                  className={[
-                    "grid w-full gap-4 px-5 py-5 text-left transition hover:bg-sky-50/60 md:grid-cols-[90px_1fr_1.2fr_auto] md:items-center",
-                    "bg-white",
-                  ].join(" ")}
-                >
-                  <div>
-                    <p className="text-lg font-bold text-slate-900">
-                      {appointment.time}
-                    </p>
-                    <p className="text-xs font-medium text-slate-400">
-                      30 min
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-sky-100 text-xs font-bold text-sky-700">
-                      {getInitials(patientName)}
-                    </div>
-
-                    <div>
-                      <p className="font-bold text-slate-900">{patientName}</p>
-                      <p className="text-sm text-slate-500">Patient</p>
-                    </div>
-                  </div>
-
-                  <div>
-                    <p className="font-semibold text-slate-900">
-                      {appointment.reason || "No reason provided"}
-                    </p>
-                    <p className="text-sm text-slate-500">Reason for visit</p>
-                  </div>
-
-                  <StatusBadge status={appointment.status} />
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      ))
-    ) : (
-      <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 px-6 py-14 text-center">
-        <h3 className="font-bold text-slate-900">No appointments this week</h3>
-        <p className="mt-2 text-sm text-slate-500">
-          Confirmed and pending appointments will appear here.
-        </p>
+        ))}
       </div>
-    )}
+
+      <div className="grid grid-cols-7">
+        {weekDays.map((day, index) => {
+          const appointmentsForDay = (weekAppointmentsByDate[day.date] ?? [])
+            .slice()
+            .sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
+
+          return (
+            <div
+              key={day.date}
+              className={[
+                "min-h-[520px] border-r border-slate-100 p-3",
+                index === 6 ? "border-r-0" : "",
+                day.isToday ? "bg-sky-50/30" : "bg-white",
+              ].join(" ")}
+            >
+              {appointmentsForDay.length > 0 ? (
+                <div className="space-y-2">
+                  {appointmentsForDay.map((appointment) => {
+                    const patientName = getPatientName(appointment);
+
+                    return (
+                      <button
+                        key={appointment.id}
+                        type="button"
+                        onClick={() => setSelectedBooking(appointment)}
+                        className={[
+                          "w-full rounded-2xl px-3 py-3 text-left text-xs shadow-sm transition hover:-translate-y-0.5 hover:shadow-md",
+                          appointment.status === "pending"
+                            ? "border border-amber-100 bg-amber-50 text-amber-700"
+                            : "border border-sky-100 bg-sky-50 text-sky-700",
+                        ].join(" ")}
+                      >
+                        <p className="font-bold">{appointment.time}</p>
+                        <p className="mt-1 truncate font-semibold">
+                          {patientName}
+                        </p>
+                        <p className="mt-1 line-clamp-2 text-[11px] opacity-80">
+                          {appointment.reason || "No reason provided"}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="flex h-full items-center justify-center rounded-2xl border border-dashed border-slate-100 bg-slate-50/60 px-3 text-center">
+                  <p className="text-xs font-medium text-slate-300">
+                    No appointments
+                  </p>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
   </section>
 ) : (
   <section>

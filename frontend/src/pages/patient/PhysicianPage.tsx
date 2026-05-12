@@ -24,6 +24,8 @@ function buildDateStrip() {
   return days;
 }
 
+
+
 function timeToMinutes(time: string) {
   const [rawTime, period] = time.trim().split(" ");
   const [rawHour, rawMinute] = rawTime.split(":");

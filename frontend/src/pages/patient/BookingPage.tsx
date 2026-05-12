@@ -96,11 +96,7 @@ export default function BookingPage() {
     
   </div>
 
-    {/* {!loading && !error && (
-        <span className="w-fit rounded-full border border-sky-100 bg-sky-50 px-4 py-2 text-sm font-medium text-sky-600">
-        {filteredPhysicians.length} of {physicians.length} physicians
-        </span>
-    )} */}
+   
      </div>
 
         {!loading && !error && (
