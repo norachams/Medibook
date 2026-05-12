@@ -118,4 +118,19 @@ From the dashboard, patients can click “Book appointment” to enter a physici
 
 
   # Future Enhancements 
-- Right now, the patient can only book from the available appointment slots shown for the upcoming week. With more time, I would make the booking flow more flexible by adding a fuller calendar view where patients can browse future dates.
+
+-  **Advanced physician search and filters**  
+  Add filters for specialty, location, availability, language, ratings, and appointment type.
+
+- **Secure file uploads**  
+  Let patients upload documents such as referral forms, lab results, or insurance information before appointments.
+  
+- **Expanded booking calendar**  
+  Allow patients to browse future appointment availability through a full calendar view instead of only seeing slots for the upcoming week.
+
+- **Improve backend validation and error handling**  
+  Add more robust validation for appointment creation, user input, and booking conflicts to make the API more reliable.
+
+- **Add automated testing**  
+  Implement unit and integration tests for key flows such as authentication, booking appointments, updating appointment statuses, and viewing patient details.
+
