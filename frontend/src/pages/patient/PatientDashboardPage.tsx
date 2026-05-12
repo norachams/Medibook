@@ -8,6 +8,8 @@ interface Booking {
   id: number;
   status: "pending" | "confirmed" | "cancelled" | "completed";
   reason: string;
+  decline_reason?: string;
+  patient_dismissed?: boolean;
   created_at: string;
   patient_name: string;
   patient_email: string;
@@ -18,7 +20,6 @@ interface Booking {
   display_date: string;
   time: string;
 }
- 
 const STATUS_STYLES: Record<Booking["status"], { pill: string; dot: string }> = {
   pending:   { pill: "bg-amber-50 text-amber-700",   dot: "bg-amber-400" },
   confirmed: { pill: "bg-emerald-50 text-emerald-700", dot: "bg-emerald-400" },
@@ -72,13 +73,7 @@ export default function PatientDashboardPage() {
       .finally(() => setLoading(false));
   }, [token]);
  
-  // // Derive counts from real data
-  // const counts = {
-  //   upcoming:  bookings.filter((b) => b.status === "confirmed").length,
-  //   pending:   bookings.filter((b) => b.status === "pending").length,
-  //   confirmed: bookings.filter((b) => b.status === "confirmed").length,
-  // };
-
+ 
   const handleSignOut = () => {
   logout();
   navigate("/login");
@@ -116,6 +111,28 @@ const handleCancel = async (bookingId: number, cancelReason: string) => {
     setError("Could not cancel appointment. Try again.");
   } finally {
     setCancelling(null);
+  }
+};
+
+const handleDismissDeclined = async (bookingId: number) => {
+  setError(null);
+
+  try {
+    const res = await fetch(
+      `http://localhost:8000/api/bookings/${bookingId}/dismiss`,
+      {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!res.ok) throw new Error();
+
+    setBookings((prev) => prev.filter((b) => b.id !== bookingId));
+  } catch {
+    setError("Could not dismiss this declined request. Try again.");
   }
 };
  
@@ -274,96 +291,130 @@ const handleCancel = async (bookingId: number, cancelReason: string) => {
             {!loading && !error && bookings.length > 0 && (
               <div className="flex flex-col gap-3">
                 {bookings.map((b) => {
-                  const style = STATUS_STYLES[b.status];
+                  const isDeclined = b.status === "cancelled" && !!b.decline_reason;
+                  const style = isDeclined
+                    ? { pill: "bg-red-50 text-red-600", dot: "bg-red-400" }
+                    : STATUS_STYLES[b.status];
+
                   const isActive = b.status !== "cancelled";
  
                   return (
-                    <div key={b.id}
-                      className={[
-                        "relative rounded-2xl border p-5 transition",
-                        // Cancelled cards are visually muted
-                        b.status === "cancelled"
-                          ? "border-gray-100 bg-gray-50 opacity-60"
-                          : "border-gray-100 bg-white shadow-sm hover:shadow-md hover:shadow-gray-100",
-                      ].join(" ")}
-                    >
-                      <div className="flex items-start justify-between gap-4">
- 
-                        {/* Left: appointment info */}
-                        <div className="flex items-start gap-4">
-                          {/* Colored left border accent */}
-                          <div className={`mt-1 h-10 w-1 flex-shrink-0 rounded-full ${style.dot}`} />
-                          <div>
-                            <p className="font-semibold text-gray-900">{b.physician_name}</p>
-                            <p className="text-sm font-medium text-sky-500">{b.specialty}</p>
-                            <p className="mt-1 text-sm text-gray-500">{b.display_date} at {b.time}</p>
-                            <p className="mt-0.5 text-xs italic text-gray-400">"{b.reason}"</p>
-                          </div>
-                        </div>
- 
-                        {/* Right: status + menu */}
-                        <div className="flex flex-shrink-0 flex-col items-end gap-2">
-                          <span className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${style.pill}`}>
-                            {b.status}
-                          </span>
- 
-                          {/* Three-dot menu — only for active bookings */}
-                          {isActive && (
-                            <div className="relative">
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation(); // prevent the document click from closing immediately
-                                  setOpenMenuId(openMenuId === b.id ? null : b.id);
-                                }}
-                                className="flex h-7 w-7 items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
-                              >
-                                ···
-                              </button>
- 
-                              {openMenuId === b.id && (
-                                <div className="absolute right-0 top-8 z-20 w-44 overflow-hidden rounded-xl border border-gray-100 bg-white shadow-lg shadow-gray-200/60">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleReschedule(b)}
-                                    className="block w-full px-4 py-3 text-left text-sm text-gray-600 transition hover:bg-sky-50 hover:text-sky-700"
-                                  >
-                                    Reschedule
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setOpenMenuId(null);
-                                      setBookingToCancel(b);
-                                    }}
-                                    disabled={cancelling === b.id}
-                                    className="block w-full px-4 py-3 text-left text-sm text-red-500 transition hover:bg-red-50 disabled:opacity-50"
-                                  >
-                                    {cancelling === b.id ? "Cancelling…" : "Cancel appointment"}
-                                  </button>
-                                </div>
-                              )}
-                              {bookingToCancel && (
-                              <CancelAppointmentModal
-                                appointmentLabel={`${bookingToCancel.physician_name} on ${bookingToCancel.display_date} at ${bookingToCancel.time}`}
-                                loading={cancelling === bookingToCancel.id}
-                                onClose={() => setBookingToCancel(null)}
-                                onConfirm={(cancelReason) =>
-                                  handleCancel(bookingToCancel.id, cancelReason)
-                                }
-                              />
-                            )}
-                            </div>
-                          )}
-                        </div>
- 
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}  
+  <div
+    key={b.id}
+    className={[
+      "relative rounded-2xl border p-5 transition",
+      isDeclined
+        ? "border-red-100 bg-red-50/40 shadow-sm"
+        : b.status === "cancelled"
+        ? "border-gray-100 bg-gray-50 opacity-60"
+        : "border-gray-100 bg-white shadow-sm hover:shadow-md hover:shadow-gray-100",
+    ].join(" ")}
+  >
+    <div className="flex items-start justify-between gap-4">
+      <div className="flex items-start gap-4">
+        <div className={`mt-1 h-10 w-1 flex-shrink-0 rounded-full ${style.dot}`} />
 
+        <div>
+          <p className="font-semibold text-gray-900">{b.physician_name}</p>
+          <p className="text-sm font-medium text-sky-500">{b.specialty}</p>
+          <p className="mt-1 text-sm text-gray-500">
+            {b.display_date} at {b.time}
+          </p>
+          <p className="mt-0.5 text-xs italic text-gray-400">"{b.reason}"</p>
+
+          {isDeclined && (
+            <div className="mt-4 rounded-2xl border border-red-100 bg-white px-4 py-3">
+              <p className="text-xs font-semibold uppercase tracking-widest text-red-400">
+                Reason
+              </p>
+              <p className="mt-2 text-sm leading-6 text-gray-700">
+                {b.decline_reason}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="flex flex-shrink-0 flex-col items-end gap-2">
+        <span className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${style.pill}`}>
+          {isDeclined ? "Declined" : b.status}
+        </span>
+
+        {isDeclined ? (
+          <div className="mt-2 flex gap-2">
+            <button
+              type="button"
+              onClick={() => handleReschedule(b)}
+              className="rounded-xl bg-sky-500 px-4 py-2 text-xs font-semibold text-white shadow-sm shadow-sky-100 transition hover:bg-sky-600"
+            >
+              Reschedule
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleDismissDeclined(b.id)}
+              className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-xs font-semibold text-gray-500 transition hover:bg-gray-50 hover:text-gray-700"
+            >
+              Dismiss
+            </button>
+          </div>
+        ) : (
+          isActive && (
+            <div className="relative">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setOpenMenuId(openMenuId === b.id ? null : b.id);
+                }}
+                className="flex h-7 w-7 items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
+              >
+                ···
+              </button>
+
+              {openMenuId === b.id && (
+                <div className="absolute right-0 top-8 z-20 w-44 overflow-hidden rounded-xl border border-gray-100 bg-white shadow-lg shadow-gray-200/60">
+                  <button
+                    type="button"
+                    onClick={() => handleReschedule(b)}
+                    className="block w-full px-4 py-3 text-left text-sm text-gray-600 transition hover:bg-sky-50 hover:text-sky-700"
+                  >
+                    Reschedule
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpenMenuId(null);
+                      setBookingToCancel(b);
+                    }}
+                    disabled={cancelling === b.id}
+                    className="block w-full px-4 py-3 text-left text-sm text-red-500 transition hover:bg-red-50 disabled:opacity-50"
+                  >
+                    {cancelling === b.id ? "Cancelling…" : "Cancel appointment"}
+                  </button>
+                </div>
+              )}
+            </div>
+          )
+        )}
+      </div>
+    </div>
+  </div>
+);
+})}
+</div>
+)}  
+                {bookingToCancel && (
+                  <CancelAppointmentModal
+                    appointmentLabel={`${bookingToCancel.physician_name} on ${bookingToCancel.display_date} at ${bookingToCancel.time}`}
+                    loading={cancelling === bookingToCancel.id}
+                    onClose={() => setBookingToCancel(null)}
+                    onConfirm={(cancelReason) =>
+                      handleCancel(bookingToCancel.id, cancelReason)
+                    }
+                  />
+                )}
               {!loading && !error && bookings.length === 0 && (
               <div className="rounded-2xl border border-dashed border-sky-100 bg-sky-50/60 px-6 py-10 text-center">
                 <p className="text-base font-semibold text-gray-800">

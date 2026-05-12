@@ -58,6 +58,7 @@ def init_db():
             status           TEXT    DEFAULT 'pending'
                                     CHECK(status IN ('pending', 'confirmed', 'cancelled', 'completed')),
             decline_reason   TEXT,
+            patient_dismissed INTEGER DEFAULT 0,
             physician_notes  TEXT,
             completed_at     DATETIME,
             created_at       DATETIME DEFAULT CURRENT_TIMESTAMP,

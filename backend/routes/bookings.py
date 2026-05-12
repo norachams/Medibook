@@ -108,6 +108,8 @@ def get_my_bookings():
             b.id,
             b.status,
             b.reason,
+            b.decline_reason,
+            b.patient_dismissed,
             b.patient_name,
             b.patient_email,
             b.patient_phone,
@@ -122,8 +124,16 @@ def get_my_bookings():
         JOIN users u               ON u.id  = pp.user_id
         JOIN appointment_slots s   ON s.id  = b.slot_id
         WHERE b.patient_id = ?
-        AND b.status != 'cancelled'
         AND b.status != 'completed'
+        AND (
+            b.status != 'cancelled'
+            OR (
+            b.status = 'cancelled'
+            AND b.decline_reason IS NOT NULL
+            AND b.decline_reason != ''
+            AND b.patient_dismissed = 0
+            )
+        )
         ORDER BY b.created_at DESC
         """,
         (patient_id,),
@@ -135,6 +145,8 @@ def get_my_bookings():
             "id":             r["id"],
             "status":         r["status"],
             "reason":         r["reason"],
+            "decline_reason": r["decline_reason"] or "",
+            "patient_dismissed": bool(r["patient_dismissed"]),
             "patient_name":   r["patient_name"],
             "patient_email":  r["patient_email"],
             "patient_phone":  r["patient_phone"],
@@ -796,6 +808,48 @@ def cancel_booking(booking_id):
     conn.close()
     return jsonify({"message": "Booking cancelled."}), 200
 
+# ---------------------------------------------------------------------------
+# PATCH /api/bookings/<id>/dismiss
+# Patient dismisses a physician-declined booking from their dashboard
+# ---------------------------------------------------------------------------
+@bookings_bp.route("/<int:booking_id>/dismiss", methods=["PATCH"])
+@jwt_required()
+def dismiss_declined_booking(booking_id):
+    patient_id = int(get_jwt_identity())
+
+    conn = get_db()
+
+    booking = conn.execute(
+        """
+        SELECT *
+        FROM bookings
+        WHERE id = ?
+          AND patient_id = ?
+          AND status = 'cancelled'
+          AND decline_reason IS NOT NULL
+          AND decline_reason != ''
+        """,
+        (booking_id, patient_id),
+    ).fetchone()
+
+    if not booking:
+        conn.close()
+        return jsonify({"error": "Declined booking not found."}), 404
+
+    conn.execute(
+        """
+        UPDATE bookings
+        SET patient_dismissed = 1
+        WHERE id = ?
+        """,
+        (booking_id,),
+    )
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({"message": "Declined booking dismissed."}), 200
+
 
 # ---------------------------------------------------------------------------
 # PATCH /api/bookings/<id>/reschedule
@@ -824,9 +878,13 @@ def reschedule_booking(booking_id):
         conn.close()
         return jsonify({"error": "Booking not found."}), 404
 
-    if booking["status"] in ["cancelled", "completed"]:
+    if booking["status"] == "completed":
         conn.close()
-        return jsonify({"error": "Cannot reschedule a cancelled or completed booking."}), 409
+        return jsonify({"error": "Cannot reschedule a completed booking."}), 409
+
+    if booking["status"] == "cancelled" and not booking["decline_reason"]:
+        conn.close()
+        return jsonify({"error": "Cannot reschedule a cancelled booking."}), 409
 
     # Confirm the new slot is available
     new_slot = conn.execute(
@@ -848,8 +906,15 @@ def reschedule_booking(booking_id):
         (new_slot_id,),
     )
     conn.execute(
-        "UPDATE bookings SET slot_id = ?, status = 'pending' WHERE id = ?",
-        (new_slot_id, booking_id),
+    """
+    UPDATE bookings
+    SET slot_id = ?,
+        status = 'pending',
+        decline_reason = NULL,
+        patient_dismissed = 0
+    WHERE id = ?
+    """,
+    (new_slot_id, booking_id),
     )
 
     conn.commit()
