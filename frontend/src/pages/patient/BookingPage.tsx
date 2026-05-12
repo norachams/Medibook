@@ -52,6 +52,7 @@ export default function BookingPage() {
   const [physicians, setPhysicians] = useState<Physician[]>([]);
   const [loading, setLoading]       = useState(true);
   const [error, setError]           = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     fetch("http://localhost:8000/api/physicians/")
@@ -62,7 +63,20 @@ export default function BookingPage() {
       .then((data: Physician[]) => setPhysicians(data))
       .catch(() => setError("Could not load physicians. Is the backend running?"))
       .finally(() => setLoading(false));
-  }, []); // empty array = run once on mount
+  }, []); 
+
+  const filteredPhysicians = physicians.filter((physician) => {
+  const query = searchQuery.toLowerCase().trim();
+
+  if (!query) return true;
+
+  return (
+    physician.name.toLowerCase().includes(query) ||
+    physician.specialty.toLowerCase().includes(query) ||
+    physician.description.toLowerCase().includes(query) ||
+    physician.location.toLowerCase().includes(query)
+  );
+});
 
   return (
     <div className="min-h-screen bg-linear-to-br from-white via-sky-50 to-blue-100 px-6 py-10">
@@ -74,21 +88,32 @@ export default function BookingPage() {
             ← Back to dashboard
             </button>
 
-        <div className="mb-10 flex items-start justify-between">
-            
-          <div>
-           
-            <h1 className="text-4xl font-bold tracking-tight text-gray-900">
-              Choose a physician
-            </h1>
-            
-          </div>
-          {!loading && !error && (
-            <span className="rounded-full border border-sky-100 bg-sky-50 px-4 py-2 text-sm font-medium text-sky-600">
-              {physicians.length} physicians available
-            </span>
-          )}
+        <div className="mb-8 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+  <div>
+    <h1 className="text-4xl font-bold tracking-tight text-gray-900">
+      Choose a physician
+    </h1>
+    
+  </div>
+
+    {/* {!loading && !error && (
+        <span className="w-fit rounded-full border border-sky-100 bg-sky-50 px-4 py-2 text-sm font-medium text-sky-600">
+        {filteredPhysicians.length} of {physicians.length} physicians
+        </span>
+    )} */}
+     </div>
+
+        {!loading && !error && (
+        <div className="mb-8 rounded-3xl border border-sky-100 bg-white p-3 shadow-lg shadow-gray-100/60">
+            <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search physicians, specialties, or locations..."
+            className="w-full rounded-2xl bg-sky-50/60 px-5 py-4 text-sm font-medium text-gray-700 outline-none transition placeholder:text-gray-400 focus:bg-white focus:ring-2 focus:ring-sky-100"
+            />
         </div>
+        )}
 
         {/* Loading state */}
         {loading && (
@@ -105,12 +130,23 @@ export default function BookingPage() {
         )}
 
         {/* Physician grid */}
-        {!loading && !error && (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {physicians.map((p) => (
-              <PhysicianCard key={p.id} physician={p} />
+        {!loading && !error && filteredPhysicians.length > 0 && (
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {filteredPhysicians.map((p) => (
+            <PhysicianCard key={p.id} physician={p} />
             ))}
-          </div>
+        </div>
+        )}
+
+        {!loading && !error && filteredPhysicians.length === 0 && (
+        <div className="rounded-3xl border border-dashed border-sky-100 bg-white/80 px-6 py-14 text-center shadow-lg shadow-gray-100/50">
+            <p className="text-base font-semibold text-gray-800">
+            No physicians found
+            </p>
+            <p className="mt-2 text-sm text-gray-500">
+            Try searching by a different name, specialty, or location.
+            </p>
+        </div>
         )}
 
       </div>
