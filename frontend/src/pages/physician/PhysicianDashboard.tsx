@@ -30,10 +30,10 @@ interface Booking {
   time: string;
 }
 
-const API = "http://localhost:8000/api/bookings";
+// const API = "http://localhost:8000/api/bookings";
 
-// const DAY_START_HOUR = 8;
-// const DAY_END_HOUR = 18;
+const API = "https://medibook-backend-1qi8.onrender.com/api/bookings";
+
 const HOUR_HEIGHT = 88;
 
 
@@ -899,9 +899,6 @@ const visibleDayHours = Array.from(
                             <p className="font-bold text-slate-900">
                               {patientName}
                             </p>
-                            {/* <p className="text-sm text-slate-500">
-                              Submitted {getCreatedAt(request) || "recently"}
-                            </p> */}
                           </div>
                         </div>
 

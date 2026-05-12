@@ -18,7 +18,8 @@ interface FieldErrors {
 // ---------------------------------------------------------------------------
 // API helpers
 // ---------------------------------------------------------------------------
-const API = "http://localhost:8000/api/auth";
+// const API = "http://localhost:8000/api/auth";
+const API = "https://medibook-backend-1qi8.onrender.com/api/auth";
 
 async function apiLogin(email: string, password: string): Promise<AuthResponse> {
   const res = await fetch(`${API}/login`, {
@@ -172,18 +173,6 @@ export default function LoginPage() {
      <div className="absolute right-[80px] bottom-[-160px] w-[420px] h-[420px] rounded-full bg-blue-300/20 blur-3xl" />
 
     <div className="w-full max-w-md relative z-10">
-
-        {/* Logo */}
-        {/* <div className="flex items-center gap-2 justify-center mb-8">
-          <div className="w-8 h-8 rounded-lg bg-teal-600 flex items-center justify-center">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M8 2v12M2 8h12" stroke="white" strokeWidth="2" strokeLinecap="round"/>
-            </svg>
-          </div>
-          <span className="text-xl font-bold tracking-tight text-gray-900">MedBook</span>
-        </div> */}
-
-        {/* Logo */}
         <div className="text-center mb-8">
           <h1 className="text-5xl font-light tracking-tight text-sky-600">
             MediBook

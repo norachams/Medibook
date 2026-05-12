@@ -243,25 +243,6 @@ const handleDismissDeclined = async (bookingId: number) => {
 )}
  
         <main className="space-y-6">
- 
-          {/* Stats — derived from real bookings
-          <section className="rounded-3xl border border-gray-100 bg-white/95 p-6 shadow-xl shadow-gray-200/50">
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="rounded-2xl bg-sky-50 p-4">
-                <p className="text-2xl font-semibold text-gray-900">{counts.upcoming}</p>
-                <p className="mt-1 text-sm text-gray-500">Upcoming</p>
-              </div>
-              <div className="rounded-2xl bg-amber-50 p-4">
-                <p className="text-2xl font-semibold text-gray-900">{counts.pending}</p>
-                <p className="mt-1 text-sm text-gray-500">Pending</p>
-              </div>
-              <div className="rounded-2xl bg-emerald-50 p-4">
-                <p className="text-2xl font-semibold text-gray-900">{counts.confirmed}</p>
-                <p className="mt-1 text-sm text-gray-500">Confirmed</p>
-              </div>
-            </div>
-          </section>
-  */}
           {/* Bookings list */}
           <section className="rounded-3xl border border-gray-100 bg-white/95 p-8 shadow-xl shadow-gray-200/50">
             <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">

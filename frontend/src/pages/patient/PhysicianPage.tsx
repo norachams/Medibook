@@ -4,7 +4,6 @@ import type { Physician,Slot } from "../../types/physician";
 import { useAuth } from "../../context/AuthContext";
 
 
-
 // ---------------------------------------------------------------------------
 // Helper — build a 7-day strip starting from today
 // Returns array of { date: "2026-05-14", label: "Wed", day: "14" }
@@ -313,7 +312,6 @@ const userPhone = currentUser?.phone ?? "";
                     </span>
                   </div>
                   <p className="mt-1 text-base font-medium text-sky-500">{physician.specialty}</p>
-                  {/* was physician.bio — field is called description in the DB */}
                   <p className="mt-2 text-sm leading-relaxed text-gray-500">{physician.description}</p>
                 </div>
               </div>
@@ -454,7 +452,6 @@ const userPhone = currentUser?.phone ?? "";
                     <p className="mb-1 font-semibold text-gray-800">Summary</p>
                     <p className="text-gray-600">{physician.name}</p>
                     <p className="text-gray-600">
-                      {/* Find the display_date for the selected date */}
                       {physician.slots.find((s) => s.date === selectedDate)?.display_date} at {selectedSlot}
                     </p>
                   </div>

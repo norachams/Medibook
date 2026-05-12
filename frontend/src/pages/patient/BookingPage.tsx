@@ -28,7 +28,6 @@ function PhysicianCard({ physician }: { physician: Physician }) {
         <p className="text-sm font-medium text-sky-500">{physician.specialty}</p>
       </div>
 
-      {/* was physician.bio — renamed to description to match DB column */}
       <p className="mb-6 text-sm leading-relaxed text-gray-500">{physician.description}</p>
 
       <div className="flex items-center justify-between">
