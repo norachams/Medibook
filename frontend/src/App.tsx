@@ -6,10 +6,10 @@ import LoginPage from "./pages/LoginPage";
 import PatientDashboardPage from "./pages/patient/PatientDashboardPage";
 import PhysicianPage from "./pages/patient/PhysicianPage";
 import BookingPage from "./pages/patient/BookingPage";
-import PhysicianDashboard from "./pages/physician/physiciandashboard";
 import PastPatients from "./pages/physician/PastPatients";
 import PatientProfilePage from "./pages/patient/PatientProfilePage";
 import PatientPastAppointmentsPage from "./pages/patient/PatientPastAppointmentsPage";
+import PhysicianDashboard from "./pages/physician/PhysicianDashboard"
 
 
 // Redirects from "/" based on auth state and role
