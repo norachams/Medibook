@@ -17,6 +17,9 @@ You can try the deployed version of Medibook here:
 
 [Live Demo](https://medibook-gray.vercel.app/login)
 
+
+> **Note:** The backend is deployed on a free hosting service, so it may take a few seconds to a couple of minutes to wake up if it has been inactive. If the first request loads slowly, please give it a moment and try again.
+
 ### Demo Accounts
 
 Use the following demo credentials to explore the app as either a patient or physician.
