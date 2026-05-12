@@ -103,17 +103,35 @@ http://localhost:5173
 
 # What was built
 
+## Key Technical and Product Decisions
 
+### Role-based patient and physician views
 
+One of the first decisions I had to make was how Medibook should handle two very different types of users: patients and physicians. Both users log into the same app, but they should not see or access the same information.
 
-# Key technical/product decisions
+To keep this clean, I added role-based access. Each user has a role stored in the database, either `patient` or `physician`, and after login, the app uses that role to send them to the correct dashboard. Patients can view and manage their appointments, while physicians can view booking requests, access patient details, and update appointment statuses.
 
-- One of the first technical/product decisions was how to handle the different views for patients and physicians after login. To keep this clean, I decided to use role-based access, where each user has a role assigned to them in the database, either `patient` or `physician`. After login, the app checks the user’s role and shows the appropriate view.
-Another question that came up was how the app would know whether a new user should be a patient or a physician. Since we do not want patients to be able to create physician accounts, public signups are assigned the `patient` role by default. Physician accounts are not created through the public signup flow. In a real system, they would be created or approved by an admin or clinic to prevent unauthorized access to the physician dashboard. For this demo, physician accounts are pre-created in the mock data.
+I also had to think about how new accounts should be created. Since patients should not be able to sign up as physicians on their own, all public signups are assigned the `patient` role by default. For this demo, physician accounts are pre-created in the mock data, but in a real system, they would be created or approved by an admin or clinic.
 
-  - The second technical/product decision was how to design the booking flow and where the main focus should be. I considered a few options, including a simple one-page flow where the patient chooses a physician, selects a time, and fills out their details all on the same page. I also considered a step-by-step wizard that guides the patient through each stage of the booking process.
-I decided not to use those approaches because they made the booking flow feel like the only focus of the app. Instead, I wanted the patient to first land on a dashboard where they can see their existing appointments and their statuses. This feels closer to how a real patient-facing product would work, since patients would usually want to manage appointments, not only create new ones.
-From the dashboard, patients can click “Book appointment” to enter a physician-first booking flow. This allows them to search available physicians, view a physician profile, choose an available time, and submit an appointment request.
+### Physician dashboard design
+
+When building the physician side, I did not want it to feel like a simple list of booking requests. In a real healthcare workflow, physicians usually need more context than just a patient name and appointment time.
+
+Because of that, I designed the physician dashboard to support the full appointment workflow. Physicians can review incoming requests, view patient information, update appointment statuses, and look back at past appointments. This makes the dashboard feel more useful beyond just accepting or rejecting bookings.
+
+### Patient-first booking flow
+
+Another decision I spent time thinking about was the booking flow. At first, I considered making it a simple form where patients choose a doctor, pick a time, and submit their details all on one page. I also considered a step-by-step flow that walks the patient through the process.
+
+I decided not to make booking the first thing users see. Instead, I wanted patients to land on a dashboard where they can see their current appointments and statuses first. This felt more realistic because a healthcare booking app should help patients manage their appointments, not only create new ones.
+
+From the dashboard, patients can choose to book a new appointment. The flow then becomes physician-first: they can search for a doctor, view the physician’s profile, choose an available time slot, and submit an appointment request.
+
+### Appointment history and visit details
+
+I also wanted the app to include small details that make it feel closer to a real healthcare product. Once an appointment is completed, patients can view the appointment again and see physician notes when available.
+
+On the physician side, doctors can view past patients and past appointments, which makes the experience feel less temporary. Instead of each booking disappearing after it is handled, both patients and physicians have a record of previous visits and important appointment details.
 
 
 
