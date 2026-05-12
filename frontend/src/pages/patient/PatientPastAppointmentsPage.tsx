@@ -29,7 +29,8 @@ export default function PatientPastAppointmentsPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("http://localhost:8000/api/bookings/past", {
+    // fetch("http://localhost:8000/api/bookings/past", {
+    fetch(`${import.meta.env.VITE_API_URL}/api/bookings/past`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => {

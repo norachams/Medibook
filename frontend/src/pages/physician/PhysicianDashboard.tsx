@@ -32,8 +32,9 @@ interface Booking {
 
 // const API = "http://localhost:8000/api/bookings";
 
-const API = "https://medibook-backend-1qi8.onrender.com/api/bookings";
+// const API = "https://medibook-backend-1qi8.onrender.com/api/bookings";
 
+const API = `${import.meta.env.VITE_API_URL}/api/bookings`;
 const HOUR_HEIGHT = 88;
 
 

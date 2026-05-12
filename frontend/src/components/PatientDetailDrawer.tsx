@@ -87,7 +87,8 @@ export default function PatientDetailDrawer({
       setError(null);
 
       try {
-        const res = await fetch(`http://localhost:8000/api/bookings/${booking.id}/patient-detail`, {
+        // const res = await fetch(`http://localhost:8000/api/bookings/${booking.id}/patient-detail`, {
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/bookings/${booking.id}/patient-detail`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) throw new Error("Failed to load patient details.");
@@ -110,7 +111,8 @@ export default function PatientDetailDrawer({
 
     try {
       const res = await fetch(
-        `http://localhost:8000/api/bookings/${booking.id}/complete`,
+        // `http://localhost:8000/api/bookings/${booking.id}/complete`,
+        `${import.meta.env.VITE_API_URL}/api/bookings/${booking.id}/complete`,
         {
           method: "PATCH",
           headers: {

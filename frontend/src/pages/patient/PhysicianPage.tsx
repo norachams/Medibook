@@ -112,7 +112,8 @@ const userPhone = currentUser?.phone ?? "";
 
    // Single fetch — sets physician AND pre-selects first slot in one .then()
   useEffect(() => {
-    fetch(`http://localhost:8000/api/physicians/${physicianId}`)
+    // fetch(`http://localhost:8000/api/physicians/${physicianId}`)
+    fetch(`${import.meta.env.VITE_API_URL}/api/physicians/${physicianId}`)
       .then((res) => {
         if (res.status === 404) throw new Error("Physician not found.");
         if (!res.ok) throw new Error("Failed to load physician.");
@@ -141,7 +142,8 @@ const userPhone = currentUser?.phone ?? "";
         }
 
         // Chain a second fetch to check for an existing active booking
-        return fetch(`http://localhost:8000/api/bookings/check/${data.id}`, {
+        // fetch(`http://localhost:8000/api/bookings/check/${data.id}`, {
+        return fetch(`${import.meta.env.VITE_API_URL}/api/bookings/check/${data.id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
       })
@@ -195,8 +197,10 @@ const userPhone = currentUser?.phone ?? "";
     try {
       // If rescheduling, PATCH the existing booking instead of creating a new one
       const url = rescheduleBookingId
-        ? `http://localhost:8000/api/bookings/${rescheduleBookingId}/reschedule`
-        : "http://localhost:8000/api/bookings/";
+      // ? `http://localhost:8000/api/bookings/${rescheduleBookingId}/reschedule`
+      // : "http://localhost:8000/api/bookings/";
+        ? `${import.meta.env.VITE_API_URL}/api/bookings/${rescheduleBookingId}/reschedule`
+        : `${import.meta.env.VITE_API_URL}/api/bookings/`;
       const method = rescheduleBookingId ? "PATCH" : "POST";
  
       const res = await fetch(url, {

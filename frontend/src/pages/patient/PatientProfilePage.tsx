@@ -43,7 +43,8 @@ export default function PatientProfilePage() {
   };
 
   useEffect(() => {
-    fetch("http://localhost:8000/api/patient/profile", {
+    // fetch("http://localhost:8000/api/patient/profile", {
+    fetch(`${import.meta.env.VITE_API_URL}/api/patient/profile`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => {
@@ -62,7 +63,8 @@ export default function PatientProfilePage() {
     setError(null);
 
     try {
-      const res = await fetch("http://localhost:8000/api/patient/profile", {
+        // const res = await fetch("http://localhost:8000/api/patient/profile", {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/patient/profile`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",

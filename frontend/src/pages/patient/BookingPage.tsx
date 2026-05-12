@@ -55,7 +55,8 @@ export default function BookingPage() {
 
   useEffect(() => {
     // fetch("http://localhost:8000/api/physicians/")
-    fetch("https://medibook-backend-1qi8.onrender.com/api/physicians/")
+    // fetch("https://medibook-backend-1qi8.onrender.com/api/physicians/")
+    fetch(`${import.meta.env.VITE_API_URL}/api/physicians/`)
       .then((res) => {
         if (!res.ok) throw new Error("Failed to load physicians.");
         return res.json();

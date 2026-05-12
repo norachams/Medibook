@@ -61,8 +61,9 @@ export default function PatientDashboardPage() {
 
 
   useEffect(() => {
-    fetch("http://localhost:8000/api/bookings/my", {
-      headers: { Authorization: `Bearer ${token}` }, 
+    // fetch("http://localhost:8000/api/bookings/my", {
+    fetch(`${import.meta.env.VITE_API_URL}/api/bookings/my`, {
+      headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => {
         if (!res.ok) throw new Error("Failed to load bookings.");
@@ -86,7 +87,8 @@ const handleCancel = async (bookingId: number, cancelReason: string) => {
 
   try {
     const res = await fetch(
-      `http://localhost:8000/api/bookings/${bookingId}/cancel`,
+      //`http://localhost:8000/api/bookings/${bookingId}/cancel`,
+      `${import.meta.env.VITE_API_URL}/api/bookings/${bookingId}/cancel`,
       {
         method: "PATCH",
         headers: {
@@ -119,7 +121,8 @@ const handleDismissDeclined = async (bookingId: number) => {
 
   try {
     const res = await fetch(
-      `http://localhost:8000/api/bookings/${bookingId}/dismiss`,
+      //`http://localhost:8000/api/bookings/${bookingId}/dismiss`,
+      `${import.meta.env.VITE_API_URL}/api/bookings/${bookingId}/dismiss`,
       {
         method: "PATCH",
         headers: {
